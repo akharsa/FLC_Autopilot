@@ -818,7 +818,7 @@ int mpu_init(struct int_param_s *int_param)
         return -1;
 #else
     /* Already disabled by setup_compass. */
-    if (mpu_set_bypass(0))
+    if (mpu_set_bypass(1))
         return -1;
 #endif
 

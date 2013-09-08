@@ -199,4 +199,3 @@ Status qI2C_ReadBits(uint8_t slaveAddr, uint8_t regAddr, uint8_t bitStart, uint8
 	return res;
 }
 
-

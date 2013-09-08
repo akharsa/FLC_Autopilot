@@ -17,6 +17,9 @@ traceLabel trcLabel;
 #define debug(msg) vTracePrintF(trcLabel,msg)
 #elif (DEBUG_LEVEL==UART_CONSOLE)
 #define debug(msg)  ConsolePuts_(msg,BLUE);
+#elif (DEBUG_LEVEL==SEMIHOSTING)
+#define debug(msg) printf(msg)
+#define debug_fmt(...) printf(__VA_ARGS__)
 #endif
 
 
