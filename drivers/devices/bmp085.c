@@ -11,6 +11,9 @@
 #include "qI2C.h"
 #include "math.h"
 
+#include "FreeRTOS.h"
+#include "task.h"
+
 static bmp085_t bmp;
 
 static char read( unsigned char device_addr,unsigned char register_addr, unsigned char * register_data,  unsigned char read_length ){
@@ -24,21 +27,21 @@ static char write(unsigned char device_addr,unsigned char register_addr, unsigne
 }
 
 
-int32_t BMP085_GetPressure(){
+float BMP085_GetPressure(){
 	unsigned long up = bmp085_get_up();
-	return bmp085_get_pressure(up);
+	return bmp085_get_pressure(up)/100.0;
 }
 
-int32_t BMP085_GetTemperature(){
+float BMP085_GetTemperature(){
+	int32_t temp;
 	unsigned long ut = bmp085_get_ut();
-	return bmp085_get_temperature(ut);
+	temp = bmp085_get_temperature(ut);
+	return temp/10.0;
 }
 
 // in Pascals
-float BMP085_CalculateAltitude(long sealevel, long actual){
-	float altitude;
-	altitude = 44330.0 * (1.0 - pow((float)actual /(float)sealevel,0.1903));
-	return altitude;
+float BMP085_CalculateAltitude(float sealevel, float actual){
+	return 44330.0 * (1.0 - pow(actual /sealevel,0.1903));
 }
 
 
@@ -48,6 +51,10 @@ Status BMP085_TestConnection(){
 	}else{
 		return ERROR;
 	}
+}
+
+void delay(uint32_t t){
+	vTaskDelay(t/portTICK_RATE_MS);
 }
 
 Status BMP085_Init(){

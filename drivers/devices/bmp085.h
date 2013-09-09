@@ -9,9 +9,9 @@
 #define BMP085_HAL_H_
 
 
-float BMP085_CalculateAltitude(long sealevel, long actual);
-int32_t BMP085_GetTemperature();
-int32_t BMP085_GetPressure();
+float BMP085_CalculateAltitude(float sealevel, float actual);
+float BMP085_GetTemperature();
+float BMP085_GetPressure();
 Status BMP085_Init();
 Status BMP085_TestConnection();
 
