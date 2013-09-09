@@ -103,7 +103,7 @@ int bmp085_init(bmp085_t *bmp085)
   
   p_bmp085->chip_id = BMP085_GET_BITSLICE(data, BMP085_CHIP_ID);  
   p_bmp085->number_of_samples = 1;  
-  p_bmp085->oversampling_setting=0;
+  p_bmp085->oversampling_setting=2;
 
   if (p_bmp085->chip_id == BMP085_CHIP_ID) {            /* get bitslice */
     p_bmp085->sensortype = BOSCH_PRESSURE_BMP085;

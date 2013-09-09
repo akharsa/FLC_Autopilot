@@ -22,7 +22,7 @@
 
 void Telemetry(void * p){
 	float altitude, bmp_temp, pressure;
-
+	float floor_pressure=0.0;
 	//===========================================================
 	// Barometer test
 	BMP085_Init();
@@ -30,12 +30,23 @@ void Telemetry(void * p){
 	xLastWakeTime = xTaskGetTickCount ();
 
 
+	uint32_t i;
+	for (i=0;i<100;i++){
+		BMP085_GetTemperature();
+		floor_pressure += BMP085_GetPressure()/100.0;
+		vTaskDelay(10/portTICK_RATE_MS);
+	}
+
+	float alt = 0.0,c=0.1;
+
 	while(1){
 		bmp_temp = BMP085_GetTemperature();
 		pressure = BMP085_GetPressure();
-		altitude = ceil(BMP085_CalculateAltitude(1008.2,pressure));
-		printf("%f \t\t %f \t\t %f\r\n", bmp_temp, pressure, altitude);
-		vTaskDelayUntil( &xLastWakeTime, 500/portTICK_RATE_MS);
+		alt =  c*BMP085_CalculateAltitude(floor_pressure, pressure) + (1-c)*alt;
+		//altitude = BMP085_CalculateAltitude(floor_pressure, pressure);
+
+		printf("%f \t\t %f \t\t %f\r\n", bmp_temp, pressure, alt);
+		vTaskDelayUntil( &xLastWakeTime, 50/portTICK_RATE_MS);
 	}
 
 }

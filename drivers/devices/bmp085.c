@@ -29,19 +29,19 @@ static char write(unsigned char device_addr,unsigned char register_addr, unsigne
 
 float BMP085_GetPressure(){
 	unsigned long up = bmp085_get_up();
-	return bmp085_get_pressure(up)/100.0;
+	return bmp085_get_pressure(up)/100.00;
 }
 
 float BMP085_GetTemperature(){
 	int32_t temp;
 	unsigned long ut = bmp085_get_ut();
 	temp = bmp085_get_temperature(ut);
-	return temp/10.0;
+	return temp/10.00;
 }
 
 // in Pascals
 float BMP085_CalculateAltitude(float sealevel, float actual){
-	return 44330.0 * (1.0 - pow(actual /sealevel,0.1903));
+	return 44330.00 * (1.00 - pow(actual /sealevel,0.1903));
 }
 
 
