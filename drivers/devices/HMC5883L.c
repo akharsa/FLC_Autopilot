@@ -41,6 +41,20 @@ static uint8_t devAddr=HMC5883L_DEFAULT_ADDRESS;
 static uint8_t buffer[6];
 static uint8_t mode;
 
+#define MPU6050_ByteRead(devAddr, regAddr, buffer) 					qI2C_Read(devAddr,buffer,regAddr,1)
+//#define MPU6050_ByteWrite(devAddr, regAddr, buffer) 				qI2C_Write(devAddr,&buffer,regAddr,1) //aca hay un problema con el puntero, tengo qeu hace un wrapper
+
+int32_t MPU6050_ByteWrite(uint8_t devAddr,uint8_t regAddr,uint8_t * buffer){
+	qI2C_Write(devAddr,buffer,regAddr,1);
+}
+
+#define MPU6050_ByteReads(devAddr, regAddr,size,  buffer) 			qI2C_Read(devAddr,buffer,regAddr,size)
+#define MPU6050_WordWrite(devAddr, regAddr, buffer) 				qI2C_Write(devAddr,&buffer,regAddr,2)
+#define MPU6050_ReadBit(devAddr, regAddr, bits, buffer) 			qI2C_ReadBit(devAddr,  regAddr,  bits, buffer)
+#define MPU6050_ReadBits(devAddr, regAddr, bits, length, buffer)	qI2C_ReadBits(devAddr, regAddr, bits, length, buffer)
+#define MPU6050_WriteBit(devAddr, regAddr, bits, buffer) 			qI2C_WriteBit(devAddr,  regAddr,  bits, buffer)
+#define MPU6050_WriteBits(devAddr, regAddr, bits, length, buffer) 	qI2C_WriteBits(devAddr, regAddr, bits, length, buffer)
+
 /** Power on and prepare for general usage.
  * This will prepare the magnetometer with default settings, ready for single-
  * use mode (very low power requirements). Default settings include 8-sample
@@ -57,13 +71,13 @@ void HMC5883L_initialize() {
 	        (HMC5883L_RATE_15     << (HMC5883L_CRA_RATE_BIT - HMC5883L_CRA_RATE_LENGTH + 1)) |
 	        (HMC5883L_BIAS_NORMAL << (HMC5883L_CRA_BIAS_BIT - HMC5883L_CRA_BIAS_LENGTH + 1));
 
-    MPU6050_ByteWrite(devAddr, HMC5883L_RA_CONFIG_A, buff);
+    MPU6050_ByteWrite(devAddr, HMC5883L_RA_CONFIG_A, &buff);
 
     // write CONFIG_B register
     HMC5883L_setGain(HMC5883L_GAIN_1370);
 
     // write MODE register
-    HMC5883L_setMode(HMC5883L_MODE_CONTINUOUS);
+    HMC5883L_setMode(HMC5883L_MODE_IDLE);
 
     HMC5883L_setMeasurementBias(0);
 }
@@ -200,7 +214,7 @@ void HMC5883L_setGain(uint8_t gain) {
     // requirement specified in the datasheet; it's actually more efficient than
     // using the I2Cdev.writeBits method
 	uint8_t buff = gain << (HMC5883L_CRB_GAIN_BIT - HMC5883L_CRB_GAIN_LENGTH + 1);
-    MPU6050_ByteWrite(devAddr, HMC5883L_RA_CONFIG_B, buff);
+    MPU6050_ByteWrite(devAddr, HMC5883L_RA_CONFIG_B, &buff);
 }
 
 // MODE register
@@ -246,7 +260,7 @@ void HMC5883L_setMode(uint8_t newMode) {
     // requirement specified in the datasheet; it's actually more efficient than
     // using the I2Cdev.writeBits method
 	uint8_t buff = mode << (HMC5883L_MODEREG_BIT - HMC5883L_MODEREG_LENGTH + 1);
-    MPU6050_ByteWrite(devAddr, HMC5883L_RA_MODE, buff);
+    MPU6050_ByteWrite(devAddr, HMC5883L_RA_MODE, &buff);
     mode = newMode; // track to tell if we have to clear bit 7 after a read
 }
 
@@ -265,7 +279,7 @@ void HMC5883L_setMode(uint8_t newMode) {
  */
 void HMC5883L_getHeading(int16_t *x, int16_t *y, int16_t *z) {
     //MPU6050_ByteReads(devAddr, HMC5883L_RA_DATAX_H, 6, buffer);
-    //if (mode == HMC5883L_MODE_SINGLE) MPU6050_ByteWrite(devAddr, HMC5883L_RA_MODE, HMC5883L_MODE_SINGLE << (HMC5883L_MODEREG_BIT - HMC5883L_MODEREG_LENGTH + 1));
+    if (mode == HMC5883L_MODE_SINGLE) MPU6050_ByteWrite(devAddr, HMC5883L_RA_MODE, HMC5883L_MODE_SINGLE << (HMC5883L_MODEREG_BIT - HMC5883L_MODEREG_LENGTH + 1));
 
 	MPU6050_ByteReads(devAddr, HMC5883L_RA_DATAX_H, 6, buffer);
 
@@ -282,7 +296,7 @@ int16_t HMC5883L_getHeadingX() {
     // one is used; this was not done ineffiently in the code by accident
 	uint8_t buff = HMC5883L_MODE_SINGLE << (HMC5883L_MODEREG_BIT - HMC5883L_MODEREG_LENGTH + 1);
     MPU6050_ByteReads(devAddr, HMC5883L_RA_DATAX_H, 6, buffer);
-    if (mode == HMC5883L_MODE_SINGLE) MPU6050_ByteWrite(devAddr, HMC5883L_RA_MODE, buff);
+    if (mode == HMC5883L_MODE_SINGLE) MPU6050_ByteWrite(devAddr, HMC5883L_RA_MODE, &buff);
     return (((int16_t)buffer[0]) << 8) | buffer[1];
 }
 /** Get Y-axis heading measurement.
@@ -294,7 +308,7 @@ int16_t HMC5883L_getHeadingY() {
     // one is used; this was not done ineffiently in the code by accident
 	uint8_t buff = HMC5883L_MODE_SINGLE << (HMC5883L_MODEREG_BIT - HMC5883L_MODEREG_LENGTH + 1);
     MPU6050_ByteReads(devAddr, HMC5883L_RA_DATAX_H, 6, buffer);
-    if (mode == HMC5883L_MODE_SINGLE) MPU6050_ByteWrite(devAddr, HMC5883L_RA_MODE, buff);
+    if (mode == HMC5883L_MODE_SINGLE) MPU6050_ByteWrite(devAddr, HMC5883L_RA_MODE, &buff);
     return (((int16_t)buffer[4]) << 8) | buffer[5];
 }
 /** Get Z-axis heading measurement.
@@ -306,7 +320,7 @@ int16_t HMC5883L_getHeadingZ() {
     // one is used; this was not done ineffiently in the code by accident
 	uint8_t buff = HMC5883L_MODE_SINGLE << (HMC5883L_MODEREG_BIT - HMC5883L_MODEREG_LENGTH + 1);
     MPU6050_ByteReads(devAddr, HMC5883L_RA_DATAX_H, 6, buffer);
-    if (mode == HMC5883L_MODE_SINGLE) MPU6050_ByteWrite(devAddr, HMC5883L_RA_MODE, buff);
+    if (mode == HMC5883L_MODE_SINGLE) MPU6050_ByteWrite(devAddr, HMC5883L_RA_MODE, &buff);
     return (((int16_t)buffer[2]) << 8) | buffer[3];
 }
 

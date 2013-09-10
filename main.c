@@ -26,53 +26,61 @@
 
 #include "mavlink_bridge.h"
 
-void Telemetry(void * p){
+#include "HMC5883L.h"
+
+
+void MAVlink_Telemetry(void * p){
 	float altitude, bmp_temp, pressure;
 	float floor_pressure=0.0;
-	//===========================================================
-	// Barometer test
-	BMP085_Init();
+	float alt = 0.0, c=0.1;
+	uint32_t i;
+
 	portTickType xLastWakeTime;
 	xLastWakeTime = xTaskGetTickCount ();
 
+	BMP085_Init();
 
-	uint32_t i;
 	for (i=0;i<100;i++){
 		BMP085_GetTemperature();
 		floor_pressure += BMP085_GetPressure()/100.0;
 		vTaskDelay(10/portTICK_RATE_MS);
 	}
 
-	float alt = 0.0,c=0.1;
+	int16_t mag[3];
+
+	HMC5883L_initialize();
+	if (HMC5883L_testConnection()!=TRUE){
+	}
+
+
+	uint8_t gain = HMC5883L_getGain();
 
 	while(1){
 		bmp_temp = BMP085_GetTemperature();
 		pressure = BMP085_GetPressure();
 		alt =  c*BMP085_CalculateAltitude(floor_pressure, pressure) + (1-c)*alt;
-		//altitude = BMP085_CalculateAltitude(floor_pressure, pressure);
 
-		printf("%f \t\t %f \t\t %f\r\n", bmp_temp, pressure, alt);
-		vTaskDelayUntil( &xLastWakeTime, 50/portTICK_RATE_MS);
+		HMC5883L_setMeasurementBias(0);
+		HMC5883L_getHeading(&mag[0],&mag[1],&mag[2]);
+		//printf("%i \t %i \t %i\n",mag[0],mag[1],mag[2]);
+
+		mvalink_send_telemetry(pressure,floor_pressure,bmp_temp);
+
+		vTaskDelayUntil( &xLastWakeTime, 500/portTICK_RATE_MS);
 	}
 
 }
 
 
-void MAVLink(void *p){
+void MAVLink_Heartbeat(void *p){
 	portTickType xLastWakeTime;
 	xLastWakeTime = xTaskGetTickCount ();
 
-	mavlink_init(qUART_Send);
-
 	while(1){
-		//fwrite(buf, 1, len, fp);
-		//qUART_Send(UART_GROUNDCOMM,buf,len);
 		mavlink_heartbeat();
 		mavlink_system_status();
-		vTaskDelayUntil( &xLastWakeTime, 500/portTICK_RATE_MS);
+		vTaskDelayUntil( &xLastWakeTime, 1000/portTICK_RATE_MS);
 	}
-
-	return 0;
 }
 
 
@@ -129,8 +137,11 @@ void AppMain(void){
 	}
 	qUART_EnableTx(UART_GROUNDCOMM);
 
-	//xTaskCreate( Telemetry, "TLM", 300, NULL, tskIDLE_PRIORITY, NULL );
-	xTaskCreate( MAVLink, "MAVLINK", 300, NULL, tskIDLE_PRIORITY, NULL );
+	mavlink_init(qUART_Send);
+
+
+	xTaskCreate( MAVlink_Telemetry, "TLM", 300, NULL, tskIDLE_PRIORITY, NULL );
+	xTaskCreate( MAVLink_Heartbeat, "HEARTBEAT", 300, NULL, tskIDLE_PRIORITY, NULL );
 	vTaskStartScheduler();
 	while(1);
 }
