@@ -80,8 +80,8 @@ void ConsolePuts_(char * buff,int color ){
 	memcpy(&msgBuffer[pos],msgs[1],strlen((char*)msgs[1]));
 	pos += strlen((char*)msgs[1]);
 
-	//qComms_SendMsg(UART_GROUNDCOMM,0xBB,MSG_TYPE_DEBUG,(uint8_t)strlen((char*)msgs[0]),msgs[0]);
-	qComms_SendMsg(UART_GROUNDCOMM,0xBB,MSG_TYPE_DEBUG,pos,msgBuffer);
+	qUART_Send(UART_GROUNDCOMM,msgBuffer,pos);
+	//qComms_SendMsg(UART_GROUNDCOMM,0xBB,MSG_TYPE_DEBUG,pos,msgBuffer);
 
 }
 
