@@ -90,7 +90,17 @@ void mavlink_send_attitude(float roll, float pitch, float yaw, float rolld, floa
 	// Copy the message to the send buffer
 	uint16_t len = mavlink_msg_to_send_buffer(buf, &msg);
 	(*sender_function)(UART_GROUNDCOMM,buf,len);
+}
 
+void mavlink_send_hud(float altitude){
+	mavlink_message_t msg;
+	uint8_t buf[MAVLINK_MAX_PACKET_LEN];
+
+	mavlink_msg_vfr_hud_pack(mavlink_system.sysid,mavlink_system.compid,&msg,xTaskGetTickCount(),0.0,250,0,altitude,0.0);
+
+	// Copy the message to the send buffer
+	uint16_t len = mavlink_msg_to_send_buffer(buf, &msg);
+	(*sender_function)(UART_GROUNDCOMM,buf,len);
 }
 
 

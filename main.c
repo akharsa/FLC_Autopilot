@@ -106,11 +106,11 @@ void MAVlink_Telemetry(void * p){
 		vTaskDelay(10/portTICK_RATE_MS);
 	}
 
-	int16_t mag[3];
+	//int16_t mag[3];
 
-	HMC5883L_initialize();
-	if (HMC5883L_testConnection()!=TRUE){
-	}
+	//HMC5883L_initialize();
+	//if (HMC5883L_testConnection()!=TRUE){
+	//}
 
 
 	while(1){
@@ -123,9 +123,10 @@ void MAVlink_Telemetry(void * p){
 		//printf("%i \t %i \t %i\n",mag[0],mag[1],mag[2]);
 
 		mvalink_send_telemetry(pressure,floor_pressure,bmp_temp);
-
+		mavlink_send_hud(alt);
 		vTaskDelayUntil( &xLastWakeTime, 500/portTICK_RATE_MS);
 	}
+
 
 }
 
@@ -245,9 +246,9 @@ void AppMain(void){
 	mavlink_init(qUART_Send);
 
 
-	//xTaskCreate( MAVlink_Telemetry, "TLM", 300, NULL, tskIDLE_PRIORITY, NULL );
-	xTaskCreate( MAVLink_Heartbeat, "HEARTBEAT", 300, NULL, tskIDLE_PRIORITY, NULL );
-	xTaskCreate( SensorCollector, "IMU", 300, NULL, tskIDLE_PRIORITY, NULL );
+	xTaskCreate( MAVlink_Telemetry, "TLM", 300, NULL, tskIDLE_PRIORITY+2, NULL );
+	xTaskCreate( MAVLink_Heartbeat, "HEARTBEAT", 300, NULL, tskIDLE_PRIORITY+2, NULL );
+	xTaskCreate( SensorCollector, "IMU", 300, NULL, tskIDLE_PRIORITY+1, NULL );
 	vTaskStartScheduler();
 	while(1);
 }
