@@ -40,9 +40,9 @@ void mavlink_init(uint32_t (*fp)(uint8_t id, uint8_t * buff, size_t size)){
 void mavlink_heartbeat(){
 
 	uint8_t autopilot_type = MAV_AUTOPILOT_GENERIC;
-	uint8_t system_mode = MAV_MODE_FLAG_CUSTOM_MODE_ENABLED; ///< Booting up
+	uint8_t system_mode = MAV_MODE_FLAG_SAFETY_ARMED | MAV_MODE_FLAG_MANUAL_INPUT_ENABLED; ///< Booting up
 	uint32_t custom_mode = 0;                 ///< Custom mode, can be defined by user/adopter
-	uint8_t system_state = MAV_STATE_STANDBY; ///< System ready for flight
+	uint8_t system_state = MAV_STATE_ACTIVE; ///< System ready for flight
 
 	// Initialize the required buffers
 	mavlink_message_t msg;
@@ -96,7 +96,7 @@ void mavlink_send_hud(float altitude){
 	mavlink_message_t msg;
 	uint8_t buf[MAVLINK_MAX_PACKET_LEN];
 
-	mavlink_msg_vfr_hud_pack(mavlink_system.sysid,mavlink_system.compid,&msg,xTaskGetTickCount(),0.0,250,0,altitude,0.0);
+	mavlink_msg_vfr_hud_pack(mavlink_system.sysid,mavlink_system.compid,&msg,25.5,100.0,250,0,altitude*1000,0.0);
 
 	// Copy the message to the send buffer
 	uint16_t len = mavlink_msg_to_send_buffer(buf, &msg);
