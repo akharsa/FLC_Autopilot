@@ -75,8 +75,8 @@ uint8_t msgBuffer[300];
 void ConsolePuts_(char * buff,int color ){
 	uint8_t * msgs[] = {(uint8_t *)(colorArray[color]),(uint8_t *)buff};
 	uint32_t pos = 0;
-	memcpy(&msgBuffer[pos],msgs[0],strlen((char*)msgs[0]));
-	pos += strlen((char*)msgs[0]);
+	//memcpy(&msgBuffer[pos],msgs[0],strlen((char*)msgs[0]));
+	//pos += strlen((char*)msgs[0]);
 	memcpy(&msgBuffer[pos],msgs[1],strlen((char*)msgs[1]));
 	pos += strlen((char*)msgs[1]);
 

@@ -1,1 +1,0 @@
-xxxxx debug : write from semihosting

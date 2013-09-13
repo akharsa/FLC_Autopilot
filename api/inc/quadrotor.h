@@ -11,6 +11,7 @@
 #include "joystick.h"
 #include "qPIDs.h"
 #include "nvram.h"
+#include "mavlink.h"
 
 #define ROLL		0
 #define PITCH		1
@@ -43,6 +44,7 @@ typedef struct {
 	qPID rateController[3];
 	qPID attiController[3];
 	qPID altitudeController;
+	mavlink_system_t mavlink_system;
 }quadrotor_t;
 
 extern quadrotor_t quadrotor;
