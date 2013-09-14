@@ -75,22 +75,27 @@ void DataCollection(void *p){
 	uint8_t more;
 	float atti_buffer[3];
 	int16_t sensors;
+	float bmp_temp, pressure, alt=0.0, c;
 
-	// MPU config
+
 	mpu_get_gyro_sens(&scale);
 	vSemaphoreCreateBinary(mpuSempahore);
-
 	xSemaphoreTake(mpuSempahore,0);
 	NVIC_EnableIRQ(EINT3_IRQn);
 
+	// ---- Barometer config ------------
+	c = 0.1;
+
 
 	while(1){
+
 		// Wait here for MPU DMP interrupt at 200Hz
 		xSemaphoreTake(mpuSempahore,portMAX_DELAY); //FIXME: instead of portMAX it would be nice to have a time out for errors
 
 		portENTER_CRITICAL();
 		dmp_read_fifo(gyro, accel, quat, NULL, &sensors, &more);
 		portEXIT_CRITICAL();
+
 		MPU6050_dmpGetEuler(atti_buffer,quat);
 
 		quadrotor.sv.attitude[0] = atti_buffer[2];
@@ -100,6 +105,11 @@ void DataCollection(void *p){
 		quadrotor.sv.rate[1] = atti_buffer[1]/scale;
 		quadrotor.sv.rate[2] = -atti_buffer[2]/scale;
 
+#if USE_BAROMETER
+		//quadrotor.sv.temperature = BMP085_GetTemperature();
+		//quadrotor.sv.current_pressure = BMP085_GetPressure();
+		//quadrotor.sv.altitude =  c*BMP085_CalculateAltitude(quadrotor.sv.floor_pressure, quadrotor.sv.current_pressure) + (1-c)*quadrotor.sv.altitude;
+#endif
 	}
 
 }
@@ -115,7 +125,6 @@ void MAVlink_Telemetry(void * p){
 	portTickType xLastWakeTime;
 	xLastWakeTime = xTaskGetTickCount ();
 
-	BMP085_Init();
 
 	for (i=0;i<100;i++){
 		BMP085_GetTemperature();
@@ -131,9 +140,7 @@ void MAVlink_Telemetry(void * p){
 
 
 	while(1){
-		bmp_temp = BMP085_GetTemperature();
-		pressure = BMP085_GetPressure();
-		alt =  c*BMP085_CalculateAltitude(floor_pressure, pressure) + (1-c)*alt;
+
 
 		//HMC5883L_setMeasurementBias(0);
 		//HMC5883L_getHeading(&mag[0],&mag[1],&mag[2]);

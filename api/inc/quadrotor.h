@@ -31,6 +31,10 @@ typedef struct {
 	float attiCtrlOutput[3];
 	uint16_t motorOutput[4];
 	uint32_t time;
+	float altitude;
+	float floor_pressure;
+	float current_pressure;
+	float temperature;
 } SV_t;
 
 typedef struct {
@@ -45,6 +49,7 @@ typedef struct {
 	qPID attiController[3];
 	qPID altitudeController;
 	mavlink_system_t mavlink_system;
+	uint16_t sysload;
 }quadrotor_t;
 
 extern quadrotor_t quadrotor;

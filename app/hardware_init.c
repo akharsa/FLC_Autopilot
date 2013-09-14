@@ -34,7 +34,8 @@
 void DataCollection(void * p);
 
 void hardware_init(void * p){
-	//============================================================
+	uint16_t i;
+
 	if (qUART_Init(UART_GROUNDCOMM,57600,8,QUART_PARITY_NONE,1)!=RET_OK){
 		halt();
 	}
@@ -42,7 +43,7 @@ void hardware_init(void * p){
 
 	debug("Initializing hardware \r\n");
 
-	uint16_t i;
+
 	for (i=0;i<TOTAL_LEDS;i++){
 		qLed_Init(leds[i]);
 		qLed_TurnOn(leds[i]);
@@ -107,13 +108,21 @@ void hardware_init(void * p){
 	debug("I2C scan finished\r\n");
 #endif
 
+	BMP085_Init();
+
 	quadrotor.mavlink_system.state = MAV_STATE_CALIBRATING;
 
-	// Here goes the calibration
+	quadrotor.sv.floor_pressure = 0.0;
+
+	for (i=0;i<100;i++){
+		BMP085_GetTemperature();
+		quadrotor.sv.floor_pressure += BMP085_GetPressure()/100.0;
+		vTaskDelay(10/portTICK_RATE_MS);
+	}
 
 	quadrotor.mavlink_system.state = MAV_STATE_STANDBY;
 
-	xTaskCreate( DataCollection, "DATCOL", 500, NULL, tskIDLE_PRIORITY+1, NULL );
+	xTaskCreate( DataCollection, "DATCOL", 500, NULL, tskIDLE_PRIORITY+2, NULL );
 	vTaskDelete(NULL);
 }
 

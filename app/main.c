@@ -37,9 +37,9 @@ void AppMain(void){
 	quadrotor.mavlink_system.mode = MAV_MODE_FLAG_MANUAL_INPUT_ENABLED;
 	quadrotor.mavlink_system.nav_mode = MAV_AUTOPILOT_GENERIC;
 
-	xTaskCreate( hardware_init, "HW_INIT", 300, NULL, tskIDLE_PRIORITY, NULL );
-	xTaskCreate( MAVLink_Heartbeat, "HEARTBEAT", 300, NULL, tskIDLE_PRIORITY+1, NULL );
-	xTaskCreate( Telemetry, "TLM", 300, NULL, tskIDLE_PRIORITY, NULL );
+	xTaskCreate( hardware_init, "HW_INIT", 300, NULL, tskIDLE_PRIORITY+1, NULL );
+	xTaskCreate( MAVLink_Heartbeat, "HEARTBEAT", 300, NULL, tskIDLE_PRIORITY+2, NULL );
+	xTaskCreate( Telemetry, "TLM", 300, NULL, tskIDLE_PRIORITY+1, NULL );
 
 	//xTaskCreate( MAVlink_Telemetry, "TLM", 300, NULL, tskIDLE_PRIORITY+2, NULL );
 	//xTaskCreate( SensorCollector, "IMU", 300, NULL, tskIDLE_PRIORITY+1, NULL );
