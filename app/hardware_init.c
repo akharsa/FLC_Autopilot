@@ -5,7 +5,7 @@
  *      Author: alan
  */
 
-#include  "quadrotor.h"
+#include "quadrotor.h"
 #include "DebugConsole.h"
 #include "board.h"
 #include "types.h"

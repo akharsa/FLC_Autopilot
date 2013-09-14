@@ -26,6 +26,7 @@
 void hardware_init(void *);
 void MAVLink_Heartbeat(void *);
 void Telemetry(void *);
+void Communications(void *);
 
 void AppMain(void){
 
@@ -40,6 +41,7 @@ void AppMain(void){
 	xTaskCreate( hardware_init, "HW_INIT", 300, NULL, tskIDLE_PRIORITY+1, NULL );
 	xTaskCreate( MAVLink_Heartbeat, "HEARTBEAT", 300, NULL, tskIDLE_PRIORITY+2, NULL );
 	xTaskCreate( Telemetry, "TLM", 300, NULL, tskIDLE_PRIORITY+1, NULL );
+	xTaskCreate( Communications, "COMMS", 300, NULL, tskIDLE_PRIORITY+1, NULL );
 
 	//xTaskCreate( MAVlink_Telemetry, "TLM", 300, NULL, tskIDLE_PRIORITY+2, NULL );
 	//xTaskCreate( SensorCollector, "IMU", 300, NULL, tskIDLE_PRIORITY+1, NULL );
