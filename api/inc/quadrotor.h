@@ -49,6 +49,7 @@ typedef struct {
 	qPID attiController[3];
 	qPID altitudeController;
 	mavlink_system_t mavlink_system;
+	mavlink_manual_control_t mavlink_control;
 	uint16_t sysload;
 }quadrotor_t;
 

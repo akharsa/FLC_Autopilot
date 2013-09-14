@@ -22,10 +22,12 @@
 #include "qUART.h"
 
 static int packet_drops = 0;
-volatile mavlink_message_t msg;
-volatile mavlink_status_t status;
+mavlink_message_t msg;
+mavlink_status_t status;
 
 xSemaphoreHandle DataSmphr;
+
+uint8_t rx_led = 0;
 
 void UART_Rx_Handler(uint8_t * buff, size_t sz);
 
@@ -58,24 +60,57 @@ void UART_Rx_Handler(uint8_t * buff, size_t sz){
 
 	xHigherPriorityTaskWoken = pdFALSE;
 
+
 	for (i=0;i<sz;i++){
 		if(mavlink_parse_char(MAVLINK_COMM_0, *(buff+i), &msg, &status)) {
-			qUART_Send(UART_GROUNDCOMM,msg.payload64,msg.len);
+
 			switch(msg.msgid){
 
-				//case MAVLINK_MSG_ID_HEARTBEAT:
-					// E.g. read GCS heartbeat and go into
-					// comm lost mode if timer times out
-				//	break;
-				//case MAVLINK_MSG_ID_COMMAND_LONG:
+				case MAVLINK_MSG_ID_HEARTBEAT:
+					if (rx_led==0){
+						qLed_TurnOn(STATUS_LED);
+						rx_led = 1;
+					}else{
+						qLed_TurnOff(STATUS_LED);
+						rx_led = 0;
+					}
+					break;
+
+				case MAVLINK_MSG_ID_COMMAND_LONG:
+
+					switch (mavlink_msg_command_long_get_command(&msg)){
+						case MAV_CMD_NAV_TAKEOFF:
+							quadrotor.mavlink_system.state = MAV_STATE_ACTIVE;
+							quadrotor.mavlink_system.mode |= MAV_MODE_FLAG_SAFETY_ARMED;
+							break;
+						case MAV_CMD_NAV_LAND:
+							quadrotor.mavlink_system.state = MAV_STATE_STANDBY;
+							quadrotor.mavlink_system.mode &= ~MAV_MODE_FLAG_SAFETY_ARMED;
+							break;
+						case MAV_CMD_COMPONENT_ARM_DISARM:
+							if (mavlink_msg_command_long_get_param1(&msg)==1){
+							}else{
+							}
+							break;
+						default:
+							break;
+					}
+
 					// EXECUTE ACTION
-				//	break;
+					break;
+				case MAVLINK_MSG_ID_MANUAL_CONTROL:
+					mavlink_msg_manual_control_decode(&msg,&quadrotor.mavlink_control);
+					if ((quadrotor.mavlink_control.buttons & 256)==0){
+						quadrotor.mavlink_system.state = MAV_STATE_STANDBY;
+						quadrotor.mavlink_system.mode &= ~MAV_MODE_FLAG_SAFETY_ARMED;
+					}
+					break;
+
 				default:
 					//Do nothing
 					break;
 				}
 		}
-		//ret=qComms_ParseByte(&msg,*(buff+i));
 	}
 
 	// Update global packet drops counter
