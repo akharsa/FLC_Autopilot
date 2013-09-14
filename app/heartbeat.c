@@ -30,16 +30,48 @@ void MAVLink_Heartbeat(void *p){
 	while(1){
 		if (qUARTStatus[UART_GROUNDCOMM]==DEVICE_READY){
 			mavlink_msg_heartbeat_pack(	quadrotor.mavlink_system.sysid,
-					quadrotor.mavlink_system.compid,
-					&msg,
-					quadrotor.mavlink_system.type,
-					quadrotor.mavlink_system.nav_mode,
-					quadrotor.mavlink_system.mode,
-					0,
-					quadrotor.mavlink_system.state);
+										quadrotor.mavlink_system.compid,
+										&msg,
+										quadrotor.mavlink_system.type,
+										quadrotor.mavlink_system.nav_mode,
+										quadrotor.mavlink_system.mode,
+										0,
+										quadrotor.mavlink_system.state);
 
 			len = mavlink_msg_to_send_buffer(buf, &msg);
 			qUART_Send(UART_GROUNDCOMM,buf,len);
+
+
+			mavlink_msg_sys_status_pack(quadrotor.mavlink_system.sysid,
+										quadrotor.mavlink_system.compid,
+										&msg,
+										SENSOR_GYRO | SENSOR_ACC | SENSOR_MAG | SENSOR_ABS_PRESSURE,
+										SENSOR_GYRO | SENSOR_ACC | SENSOR_MAG | SENSOR_ABS_PRESSURE,
+										SENSOR_GYRO | SENSOR_ACC | SENSOR_MAG | SENSOR_ABS_PRESSURE, //Sensors health
+										950, //TODO: Change to CPU load  in 0.1%
+										10700, //TODO: change to battery voltage in mV
+										-1,	//Battery current not measured
+										-1, //Battery SoC not measured
+										0,0,0,0,0,0); //Error counts
+
+			len = mavlink_msg_to_send_buffer(buf, &msg);
+			qUART_Send(UART_GROUNDCOMM,buf,len);
+
+			mavlink_msg_vfr_hud_pack(quadrotor.mavlink_system.sysid,
+									quadrotor.mavlink_system.compid,
+									&msg,
+									0.0, // Airspeed
+									0.0, // Groundspeed
+									250, //TODO: Change to heading
+									0,   //TODO: Change to throtle
+									1.5, //TODO: Change to altitude
+									0.0  //TODO: Change to ascent rate
+									);
+
+			uint16_t len = mavlink_msg_to_send_buffer(buf, &msg);
+			qUART_Send(UART_GROUNDCOMM,buf,len);
+
+
 		}
 
 		vTaskDelayUntil( &xLastWakeTime, 1000/portTICK_RATE_MS);
