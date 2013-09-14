@@ -10,7 +10,6 @@
 
 #include "joystick.h"
 #include "qPIDs.h"
-#include "nvram.h"
 #include "mavlink.h"
 
 #define ROLL		0
@@ -54,6 +53,6 @@ typedef struct {
 }quadrotor_t;
 
 extern quadrotor_t quadrotor;
-extern nvram_t nvramBuffer;
+
 
 #endif /* QUADROTOR_H_ */
