@@ -86,7 +86,6 @@ void DataCollection(void *p){
 	// ---- Barometer config ------------
 	c = 0.1;
 
-
 	while(1){
 
 		// Wait here for MPU DMP interrupt at 200Hz
@@ -110,6 +109,7 @@ void DataCollection(void *p){
 		//quadrotor.sv.current_pressure = BMP085_GetPressure();
 		//quadrotor.sv.altitude =  c*BMP085_CalculateAltitude(quadrotor.sv.floor_pressure, quadrotor.sv.current_pressure) + (1-c)*quadrotor.sv.altitude;
 #endif
+
 	}
 
 }

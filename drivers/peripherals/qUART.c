@@ -355,6 +355,7 @@ void flushBuffer(){
 
 uint32_t qUART_Send(uint8_t id, uint8_t * buff, size_t size){
 
+
 	if (timerRunning == 1){
 		TIM_Cmd(LPC_TIM0,DISABLE);
 		timerRunning = 0;

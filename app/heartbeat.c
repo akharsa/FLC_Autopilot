@@ -62,7 +62,7 @@ void MAVLink_Heartbeat(void *p){
 										SENSOR_GYRO | SENSOR_ACC | SENSOR_MAG | SENSOR_ABS_PRESSURE,
 										SENSOR_GYRO | SENSOR_ACC | SENSOR_MAG | SENSOR_ABS_PRESSURE,
 										SENSOR_GYRO | SENSOR_ACC | SENSOR_MAG | SENSOR_ABS_PRESSURE, //Sensors health
-										quadrotor.sysload, //TODO: Change to CPU load  in 0.1%
+										quadrotor.sysload,
 										10700, //TODO: change to battery voltage in mV
 										-1,	//Battery current not measured
 										-1, //Battery SoC not measured
@@ -78,7 +78,7 @@ void MAVLink_Heartbeat(void *p){
 									0.0, // Groundspeed
 									250, //TODO: Change to heading
 									0,   //TODO: Change to throtle
-									1.5, //TODO: Change to altitude
+									quadrotor.sv.altitude,
 									0.0  //TODO: Change to ascent rate
 									);
 
