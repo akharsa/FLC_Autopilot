@@ -2397,6 +2397,7 @@ unsigned portBASE_TYPE uxPriority;
 /*-----------------------------------------------------------*/
 
 static void prvCheckTasksWaitingTermination( void )
+
 {
 	#if ( INCLUDE_vTaskDelete == 1 )
 	{

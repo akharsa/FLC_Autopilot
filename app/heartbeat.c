@@ -77,6 +77,7 @@ void MAVLink_Heartbeat(void *p){
 		vTaskDelayUntil( &xLastWakeTime, 1000/portTICK_RATE_MS);
 
 		/*
+		 *  Seems to not be working on qGroundControl
 		uint32_t sensors = SENSOR_GYRO | SENSOR_ACC | SENSOR_MAG | SENSOR_ABS_PRESSURE;
 		uint32_t active_sensors = SENSOR_GYRO | SENSOR_ACC | SENSOR_MAG | SENSOR_ABS_PRESSURE;
 		uint32_t sensors_health = SENSOR_GYRO | SENSOR_ACC | SENSOR_MAG | SENSOR_ABS_PRESSURE;
@@ -85,7 +86,7 @@ void MAVLink_Heartbeat(void *p){
 		// Copy the message to the send buffer
 		uint16_t len = mavlink_msg_to_send_buffer(buf, &msg);
 		(*sender_function)(UART_GROUNDCOMM,buf,len);
-*/
+		 */
 
 	}
 }

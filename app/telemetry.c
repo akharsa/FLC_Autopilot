@@ -70,6 +70,7 @@ void Telemetry(void * p){
 			uint16_t len = mavlink_msg_to_send_buffer(buf, &msg);
 			qUART_Send(UART_GROUNDCOMM,buf,len);
 #endif
+
 		}
 		vTaskDelayUntil( &xLastWakeTime, 20/portTICK_RATE_MS);
 	}

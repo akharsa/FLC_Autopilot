@@ -28,9 +28,10 @@
 #include "HMC5883L.h"
 #include "eMPL/inv_mpu.h"
 #include "eMPL/inv_mpu_dmp_motion_driver.h"
-
+#include "ultrasonic_sensor.h"
 
 xSemaphoreHandle mpuSempahore;
+uint8_t prescaler = 0;
 
 uint8_t MPU6050_dmpGetEuler(float *euler, int32_t q[]) {
 
@@ -86,6 +87,8 @@ void DataCollection(void *p){
 	// ---- Barometer config ------------
 	c = 0.1;
 
+	//===========================================
+	prescaler = 10;
 	while(1){
 
 		// Wait here for MPU DMP interrupt at 200Hz
@@ -109,6 +112,11 @@ void DataCollection(void *p){
 		//quadrotor.sv.current_pressure = BMP085_GetPressure();
 		//quadrotor.sv.altitude =  c*BMP085_CalculateAltitude(quadrotor.sv.floor_pressure, quadrotor.sv.current_pressure) + (1-c)*quadrotor.sv.altitude;
 #endif
+
+		if (prescaler-- == 0){
+			RangeFinder_getDistance();
+			prescaler = 10;
+		}
 
 	}
 

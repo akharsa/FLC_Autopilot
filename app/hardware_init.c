@@ -27,7 +27,7 @@
 #include "HMC5883L.h"
 #include "eMPL/inv_mpu.h"
 #include "eMPL/inv_mpu_dmp_motion_driver.h"
-
+#include "ultrasonic_sensor.h"
 #include "math.h"
 
 //TODO: Sacar esto de aca!
@@ -45,7 +45,6 @@ void hardware_init(void * p){
 	qUART_EnableTx(UART_GROUNDCOMM);
 
 	debug("Initializing hardware \r\n");
-
 
 	for (i=0;i<TOTAL_LEDS;i++){
 		qLed_Init(leds[i]);
@@ -84,7 +83,7 @@ void hardware_init(void * p){
 	mpu_set_dmp_state(1);
 
 
-	// TODO: Horrible!
+	// TODO: estaria bueno que esto este adentro del driver (por ahi)
 	// GPIO0.4 as input with interrupt
 	GPIO_SetDir(0,(1<<4),0);
 	GPIO_IntCmd(0,(1<<4),1);
@@ -112,7 +111,9 @@ void hardware_init(void * p){
 #endif
 
 	BMP085_Init();
+	RangeFinder_Init();
 
+	//=========================================================================
 	quadrotor.mavlink_system.state = MAV_STATE_CALIBRATING;
 
 	quadrotor.sv.floor_pressure = 0.0;
@@ -123,11 +124,9 @@ void hardware_init(void * p){
 		vTaskDelay(10/portTICK_RATE_MS);
 	}
 
+	//=========================================================================
 	quadrotor.mavlink_system.state = MAV_STATE_STANDBY;
-
-
 	xTaskCreate( Telemetry, "TLM", 300, NULL, tskIDLE_PRIORITY+1, NULL );
-	xTaskCreate( Distance, "ULTRA", 300, NULL, tskIDLE_PRIORITY+1, NULL );
 	xTaskCreate( DataCollection, "DATCOL", 500, NULL, tskIDLE_PRIORITY+2, NULL );
 
 	vTaskDelete(NULL);
