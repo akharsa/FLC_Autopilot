@@ -29,6 +29,7 @@
 #include "eMPL/inv_mpu_dmp_motion_driver.h"
 #include "ultrasonic_sensor.h"
 #include "math.h"
+#include "qESC.h"
 
 //TODO: Sacar esto de aca!
 void DataCollection(void * p);
@@ -39,6 +40,15 @@ void Telemetry(void *);
 void hardware_init(void * p){
 	uint16_t i;
 
+	// =========================================================
+	// Early init will turn the motors off for safety if a reset occurs
+	qESC_Init();
+	qESC_InitChannel(MOTOR1);
+	qESC_InitChannel(MOTOR2);
+	qESC_InitChannel(MOTOR3);
+	qESC_InitChannel(MOTOR4);
+
+	vTaskDelay(5000/portTICK_RATE_MS);
 	if (qUART_Init(UART_GROUNDCOMM,57600,8,QUART_PARITY_NONE,1)!=RET_OK){
 		halt();
 	}

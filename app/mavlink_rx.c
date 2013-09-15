@@ -22,6 +22,7 @@
 #include "qUART.h"
 #include "parameters.h"
 #include "eeprom.h"
+#include "qESC.h"
 
 static int packet_drops = 0;
 mavlink_message_t msg;
@@ -205,6 +206,14 @@ void Communications(void * pvParameters){
 						if ((quadrotor.mavlink_control.buttons & 256)==0){
 							quadrotor.mavlink_system.state = MAV_STATE_STANDBY;
 							quadrotor.mavlink_system.mode &= ~MAV_MODE_FLAG_SAFETY_ARMED;
+						}else{
+							/*
+							quadrotor.sv.setpoint[ALTITUDE] = ((quadrotor.mavlink_control.x+1000.0)/2000.0)*500.0;
+							qESC_SetOutput(MOTOR1,quadrotor.sv.setpoint[ALTITUDE]);
+							qESC_SetOutput(MOTOR2,quadrotor.sv.setpoint[ALTITUDE]);
+							qESC_SetOutput(MOTOR3,quadrotor.sv.setpoint[ALTITUDE]);
+							qESC_SetOutput(MOTOR4,quadrotor.sv.setpoint[ALTITUDE]);
+							*/
 						}
 						break;
 					case MAVLINK_MSG_ID_PARAM_REQUEST_LIST:

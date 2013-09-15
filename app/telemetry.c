@@ -49,7 +49,7 @@ void Telemetry(void * p){
 									0.0, // Airspeed
 									0.0, // Groundspeed
 									250, //TODO: Change to realheading
-									0,   //TODO: Change to real throtle
+									quadrotor.sv.setpoint[ALTITUDE]*100,   //TODO: Change to real throtle
 									quadrotor.sv.altitude,
 									0.0  //TODO: Change to ascent rate
 									);

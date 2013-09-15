@@ -29,6 +29,7 @@
 #include "eMPL/inv_mpu.h"
 #include "eMPL/inv_mpu_dmp_motion_driver.h"
 #include "ultrasonic_sensor.h"
+#include "qESC.h"
 
 xSemaphoreHandle mpuSempahore;
 uint8_t prescaler = 0;
@@ -50,6 +51,10 @@ uint8_t MPU6050_dmpGetEuler(float *euler, int32_t q[]) {
 }
 
 
+float map(long x, long in_min, long in_max, float out_min, float out_max)
+{
+  return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+}
 
 // Hardware IRQ for the MPU6050 DMP algorithm.
 void EINT3_IRQHandler(void)
@@ -118,6 +123,29 @@ void DataCollection(void *p){
 			prescaler = 10;
 		}
 
+		//quadrotor.sv.setpoint[ALTITUDE] = map((quadrotor.joystick.left_pad.y>127)?127:255-quadrotor.joystick.left_pad.y,127,255,0.0,1.0);
+		quadrotor.sv.setpoint[ALTITUDE] = map((quadrotor.mavlink_control.x < 100)?0:quadrotor.mavlink_control.x,0,1000,0.0,1.0);
+		//quadrotor.sv.setpoint[ROLL] = map(quadrotor.joystick.right_pad.x,0,255,-40.0,40.0);
+		//quadrotor.sv.setpoint[PITCH] = map(quadrotor.joystick.right_pad.y,0,255,-40.0,40.0);
+		//quadrotor.sv.setpoint[YAW] = map(quadrotor.joystick.left_pad.x,0,255,-180.0,180.0);
+
+		quadrotor.sv.motorOutput[0] = K_Z*quadrotor.sv.setpoint[ALTITUDE];
+		quadrotor.sv.motorOutput[1] = K_Z*quadrotor.sv.setpoint[ALTITUDE];
+		quadrotor.sv.motorOutput[2] = K_Z*quadrotor.sv.setpoint[ALTITUDE];
+		quadrotor.sv.motorOutput[3] = K_Z*quadrotor.sv.setpoint[ALTITUDE];
+
+		if ((quadrotor.mavlink_system.mode & MAV_MODE_FLAG_SAFETY_ARMED) == 0){
+			qESC_SetOutput(MOTOR1,0);
+			qESC_SetOutput(MOTOR2,0);
+			qESC_SetOutput(MOTOR3,0);
+			qESC_SetOutput(MOTOR4,0);
+		}else{
+			// Motor command
+			qESC_SetOutput(MOTOR1,quadrotor.sv.motorOutput[0]);
+			qESC_SetOutput(MOTOR2,quadrotor.sv.motorOutput[1]);
+			qESC_SetOutput(MOTOR3,quadrotor.sv.motorOutput[2]);
+			qESC_SetOutput(MOTOR4,quadrotor.sv.motorOutput[3]);
+		}
 	}
 
 }
