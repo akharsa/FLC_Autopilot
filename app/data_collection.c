@@ -123,9 +123,9 @@ void DataCollection(void *p){
 		// --------------------- Biasing ---------------------
 
 		if ((quadrotor.mavlink_control.buttons & BTN_START) != 0){
-			atti_bias[ROLL] = quadrotor.sv.attitude[ROLL];
-			atti_bias[PITCH] = quadrotor.sv.attitude[PITCH];
-			atti_bias[YAW] = quadrotor.sv.attitude[YAW];
+			atti_bias[ROLL] = atti_buffer[2];
+			atti_bias[PITCH] = -atti_buffer[1];
+			atti_bias[YAW] = atti_buffer[0];
 
 			/*
 			uint8_t i;
