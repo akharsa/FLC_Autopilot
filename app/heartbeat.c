@@ -71,20 +71,6 @@ void MAVLink_Heartbeat(void *p){
 			len = mavlink_msg_to_send_buffer(buf, &msg);
 			qUART_Send(UART_GROUNDCOMM,buf,len);
 
-			mavlink_msg_vfr_hud_pack(quadrotor.mavlink_system.sysid,
-									quadrotor.mavlink_system.compid,
-									&msg,
-									0.0, // Airspeed
-									0.0, // Groundspeed
-									250, //TODO: Change to heading
-									0,   //TODO: Change to throtle
-									quadrotor.sv.altitude,
-									0.0  //TODO: Change to ascent rate
-									);
-
-			uint16_t len = mavlink_msg_to_send_buffer(buf, &msg);
-			qUART_Send(UART_GROUNDCOMM,buf,len);
-
 
 		}
 

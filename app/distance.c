@@ -38,13 +38,18 @@ void TIMER3_IRQHandler(void)
 		TIM_ClearIntCapturePending(LPC_TIM3,0);
 		quadrotor.sv.altitude = TIM_GetCaptureValue(LPC_TIM3,0)/58.0;
 		captured = 1;
-		//_DBH32(TIM_GetCaptureValue(LPC_TIM1,0));_DBG_("");
+		TIM_Cmd(LPC_TIM3,DISABLE);
 	}
 }
 
 void Distance(void *p){
 
 	PINSEL_CFG_Type PinCfg;
+	portTickType xLastWakeTime;
+
+
+	xLastWakeTime = xTaskGetTickCount ();
+
 	/*
 	 * P0.23, CAP3[0] (func 3)
 	 */
@@ -90,18 +95,27 @@ void Distance(void *p){
 		PINSEL_ConfigPin(&PinCfg);
 		GPIO_SetDir(0,(1<<23),1); // Output
 		GPIO_SetValue(0,(1<<23));
-		for (i=0;i<999999;i++);
+		vTaskDelay(1);
 		GPIO_ClearValue(0,(1<<23));
 
 		GPIO_SetDir(0,(1<<23),0); // Input
-		while ((GPIO_ReadValue(0)&(1<<23)) == 0);
+		i=0;
+		while ((GPIO_ReadValue(0)&(1<<23)) == 0){
+			if (++i==50) break;
+			vTaskDelay(1);
+		}
 		PinCfg.Funcnum = 3;
 		PINSEL_ConfigPin(&PinCfg);
 		TIM_ResetCounter(LPC_TIM3);
 		TIM_Cmd(LPC_TIM3,ENABLE);
 
-		while(captured==0);
+		i = 0;
+		while(captured==0){
+			if (++i==50) break;
+			vTaskDelay(1);
+		}
+
 		captured = 0;
-		vTaskDelay(200/portTICK_RATE_MS);
+		vTaskDelayUntil( &xLastWakeTime, 100/portTICK_RATE_MS);
 	}
 }

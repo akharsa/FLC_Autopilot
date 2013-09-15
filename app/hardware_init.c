@@ -32,6 +32,9 @@
 
 //TODO: Sacar esto de aca!
 void DataCollection(void * p);
+void Distance(void *);
+void Telemetry(void *);
+
 
 void hardware_init(void * p){
 	uint16_t i;
@@ -122,7 +125,11 @@ void hardware_init(void * p){
 
 	quadrotor.mavlink_system.state = MAV_STATE_STANDBY;
 
+
+	xTaskCreate( Telemetry, "TLM", 300, NULL, tskIDLE_PRIORITY+1, NULL );
+	xTaskCreate( Distance, "ULTRA", 300, NULL, tskIDLE_PRIORITY+1, NULL );
 	xTaskCreate( DataCollection, "DATCOL", 500, NULL, tskIDLE_PRIORITY+2, NULL );
+
 	vTaskDelete(NULL);
 }
 
