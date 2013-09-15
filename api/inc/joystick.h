@@ -10,22 +10,22 @@
 
 #include <stdint.h>
 
-#define	BTN_SELECT	 	0x0001
-#define	BTN_L3			0x0002
-#define	BTN_R3			0x0004
-#define	BTN_START		0x0008
-#define	BTN_UP			0x0010
-#define	BTN_RIGHT		0x0020
-#define	BTN_DOWN		0x0040
-#define	BTN_LEFT		0x0080
-#define	BTN_LEFT2		0x0100
-#define	BTN_RIGHT2		0x0200
-#define	BTN_LEFT1		0x0400
-#define	BTN_RIGHT1		0x0800
-#define	BTN_TRIANGLE	0x1000
-#define	BTN_CIRCLE		0x2000
-#define	BTN_CROSS		0x4000
-#define	BTN_SQUARE		0x8000
+#define	BTN_SELECT	 	(1<<0)
+#define	BTN_L3			(1<<1)
+#define	BTN_R3			(1<<2)
+#define	BTN_START		(1<<3)
+#define	BTN_UP			(1<<4)
+#define	BTN_RIGHT		(1<<5)
+#define	BTN_DOWN		(1<<6)
+#define	BTN_LEFT		(1<<7)
+#define	BTN_LEFT2		(1<<8)
+#define	BTN_RIGHT2		(1<<9)
+#define	BTN_LEFT1		(1<<10)
+#define	BTN_RIGHT1		(1<<11)
+#define	BTN_TRIANGLE	(1<<12)
+#define	BTN_CIRCLE		(1<<13)
+#define	BTN_CROSS		(1<<14)
+#define	BTN_SQUARE		(1<<15)
 
 typedef struct{
 	uint8_t x;

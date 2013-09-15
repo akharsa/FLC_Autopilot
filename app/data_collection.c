@@ -34,6 +34,9 @@
 xSemaphoreHandle mpuSempahore;
 uint8_t prescaler = 0;
 
+#define ATTI_THRESHOLD 3.0
+float atti_bias[3];
+
 uint8_t MPU6050_dmpGetEuler(float *euler, int32_t q[]) {
 
 	float q1[4];
@@ -82,7 +85,7 @@ void DataCollection(void *p){
 	float atti_buffer[3];
 	int16_t sensors;
 	float bmp_temp, pressure, alt=0.0, c;
-
+	uint16_t i;
 
 	mpu_get_gyro_sens(&scale);
 	vSemaphoreCreateBinary(mpuSempahore);
@@ -105,13 +108,6 @@ void DataCollection(void *p){
 
 		MPU6050_dmpGetEuler(atti_buffer,quat);
 
-		quadrotor.sv.attitude[0] = atti_buffer[2];
-		quadrotor.sv.attitude[1] = -atti_buffer[1];
-		quadrotor.sv.attitude[2] = atti_buffer[0];
-		quadrotor.sv.rate[0] = -atti_buffer[0]/scale;
-		quadrotor.sv.rate[1] = atti_buffer[1]/scale;
-		quadrotor.sv.rate[2] = -atti_buffer[2]/scale;
-
 #if USE_BAROMETER
 		//quadrotor.sv.temperature = BMP085_GetTemperature();
 		//quadrotor.sv.current_pressure = BMP085_GetPressure();
@@ -122,6 +118,34 @@ void DataCollection(void *p){
 			RangeFinder_getDistance();
 			prescaler = 10;
 		}
+
+
+		// --------------------- Biasing ---------------------
+
+		if ((quadrotor.mavlink_control.buttons & BTN_START) != 0){
+			atti_bias[ROLL] = quadrotor.sv.attitude[ROLL];
+			atti_bias[PITCH] = quadrotor.sv.attitude[PITCH];
+			atti_bias[YAW] = quadrotor.sv.attitude[YAW];
+
+			/*
+			uint8_t i;
+			for (i=0;i<3;i++){
+				qPID_Init(&quadrotor.rateController[i]);
+			}
+
+			for (i=0;i<3;i++){
+				qPID_Init(&quadrotor.attiController[i]);
+			}
+			*/
+		}
+
+		quadrotor.sv.attitude[0] = atti_buffer[2] - atti_bias[ROLL];
+		quadrotor.sv.attitude[1] = -atti_buffer[1] - atti_bias[PITCH];
+		quadrotor.sv.attitude[2] = atti_buffer[0] - atti_bias[YAW];
+		quadrotor.sv.rate[0] = -atti_buffer[0]/scale;
+		quadrotor.sv.rate[1] = atti_buffer[1]/scale;
+		quadrotor.sv.rate[2] = -atti_buffer[2]/scale;
+
 
 		//quadrotor.sv.setpoint[ALTITUDE] = map((quadrotor.joystick.left_pad.y>127)?127:255-quadrotor.joystick.left_pad.y,127,255,0.0,1.0);
 		quadrotor.sv.setpoint[ALTITUDE] = map((quadrotor.mavlink_control.x < 100)?0:quadrotor.mavlink_control.x,0,1000,0.0,1.0);
@@ -139,6 +163,12 @@ void DataCollection(void *p){
 			qESC_SetOutput(MOTOR2,0);
 			qESC_SetOutput(MOTOR3,0);
 			qESC_SetOutput(MOTOR4,0);
+
+			if ((fabsf(quadrotor.sv.attitude[ROLL])<=ATTI_THRESHOLD) && (fabsf(quadrotor.sv.attitude[PITCH])<=ATTI_THRESHOLD) && (fabsf(quadrotor.sv.attitude[YAW])<=ATTI_THRESHOLD)){
+				for (i=1;i<5;i++) qLed_TurnOn(leds[i]);
+			}else{
+				for (i=1;i<5;i++) qLed_TurnOff(leds[i]);
+			}
 		}else{
 			// Motor command
 			qESC_SetOutput(MOTOR1,quadrotor.sv.motorOutput[0]);
