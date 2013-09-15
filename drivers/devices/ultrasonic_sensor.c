@@ -24,15 +24,20 @@
 #include "lpc17xx_pinsel.h"
 #include "lpc17xx_timer.h"
 
+#include "math.h"
+
 TIM_TIMERCFG_Type TIM_ConfigStruct;
 TIM_MATCHCFG_Type TIM_MatchConfigStruct ;
 TIM_CAPTURECFG_Type TIM_CaptureConfigStruct;
 PINSEL_CFG_Type PinCfg;
 
-float c = 0.1;
+float c = 0.8;
 
 void TIMER3_IRQHandler(void)
 {
+	uint32_t capture;
+	float distance;
+
 	if (TIM_GetIntCaptureStatus(LPC_TIM3,0))
 	{
 		TIM_ClearIntCapturePending(LPC_TIM3,0);
@@ -40,8 +45,14 @@ void TIMER3_IRQHandler(void)
 		if ((GPIO_ReadValue(0)&(1<<23)) != 0){
 			TIM_ResetCounter(LPC_TIM3);
 		}else{
-			quadrotor.sv.altitude = c*TIM_GetCaptureValue(LPC_TIM3,0)/58.0 + (1-c)*quadrotor.sv.altitude;
-			//quadrotor.sv.altitude = TIM_GetCaptureValue(LPC_TIM3,0)/58.0;
+			capture = TIM_GetCaptureValue(LPC_TIM3,0);
+			if (capture>35000){
+				quadrotor.sv.altitude = -100.0;
+			}else{
+				distance = (capture/58.0)/100.0;
+				distance = floorf(distance * 100 + 0.5) / 100;
+				quadrotor.sv.altitude = c*distance + (1-c)*quadrotor.sv.altitude;
+			}
 			TIM_Cmd(LPC_TIM3,DISABLE);
 		}
 	}
