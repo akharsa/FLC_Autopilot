@@ -147,11 +147,11 @@ void DataCollection(void *p){
 		quadrotor.sv.rate[2] = -atti_buffer[2]/scale;
 
 
-		//quadrotor.sv.setpoint[ALTITUDE] = map((quadrotor.joystick.left_pad.y>127)?127:255-quadrotor.joystick.left_pad.y,127,255,0.0,1.0);
-		quadrotor.sv.setpoint[ALTITUDE] = map((quadrotor.mavlink_control.x < 100)?0:quadrotor.mavlink_control.x,0,1000,0.0,1.0);
-		//quadrotor.sv.setpoint[ROLL] = map(quadrotor.joystick.right_pad.x,0,255,-40.0,40.0);
-		//quadrotor.sv.setpoint[PITCH] = map(quadrotor.joystick.right_pad.y,0,255,-40.0,40.0);
-		//quadrotor.sv.setpoint[YAW] = map(quadrotor.joystick.left_pad.x,0,255,-180.0,180.0);
+		// The axis correspond to the assigment on the qground control and the mapping of the mavlink_control functions.
+		quadrotor.sv.setpoint[ALTITUDE] = map((quadrotor.mavlink_control.z < 100)?0:quadrotor.mavlink_control.z,0,1000,0.0,1.0);
+		quadrotor.sv.setpoint[ROLL] = map(quadrotor.mavlink_control.y,-1000,1000,-40.0,40.0);
+		quadrotor.sv.setpoint[PITCH] = map(quadrotor.mavlink_control.x,-1000,1000,-40.0,40.0);
+		quadrotor.sv.setpoint[YAW] = map(quadrotor.mavlink_control.r,-1000,1000,-180.0,180.0);
 
 		quadrotor.sv.motorOutput[0] = K_Z*quadrotor.sv.setpoint[ALTITUDE];
 		quadrotor.sv.motorOutput[1] = K_Z*quadrotor.sv.setpoint[ALTITUDE];

@@ -134,6 +134,32 @@ void hardware_init(void * p){
 		vTaskDelay(10/portTICK_RATE_MS);
 	}
 
+	for (i=0;i<3;i++){
+		quadrotor.rateController[i].AntiWindup = ENABLED;
+		quadrotor.rateController[i].Bumpless = ENABLED;
+		quadrotor.rateController[i].Mode = AUTOMATIC;
+		quadrotor.rateController[i].OutputMax = 1.0;
+		quadrotor.rateController[i].OutputMin = -1.0;
+		quadrotor.rateController[i].Ts = 0.005;
+		quadrotor.rateController[i].b = 1.0;
+		quadrotor.rateController[i].c = 1.0;
+		qPID_Init(&quadrotor.rateController[i]);
+	}
+
+	for (i=0;i<3;i++){
+		quadrotor.attiController[i].AntiWindup = ENABLED;
+		quadrotor.attiController[i].Bumpless = ENABLED;
+		quadrotor.attiController[i].Mode = AUTOMATIC;
+		quadrotor.attiController[i].OutputMax = 250.0;
+		quadrotor.attiController[i].OutputMin = -250.0;
+		quadrotor.attiController[i].Ts = 0.005;
+		quadrotor.attiController[i].b = 1.0;
+		quadrotor.attiController[i].c = 1.0;
+		qPID_Init(&quadrotor.attiController[i]);
+	}
+
+	//TODO: Aca va tambien la inicialización del controlador de altura
+
 	//=========================================================================
 	quadrotor.mavlink_system.state = MAV_STATE_STANDBY;
 	xTaskCreate( Telemetry, "TLM", 300, NULL, tskIDLE_PRIORITY+1, NULL );

@@ -19,6 +19,8 @@
 #include "mavlink_bridge.h"
 #include "qUART.h"
 
+#define PI 3.14159265359
+
 void Telemetry(void * p){
 	mavlink_message_t msg;
 	uint8_t buf[MAVLINK_MAX_PACKET_LEN];
@@ -29,6 +31,8 @@ void Telemetry(void * p){
 
 	while(1){
 		if (qUARTStatus[UART_GROUNDCOMM]==DEVICE_READY){
+
+/*
 			mavlink_msg_attitude_pack(	quadrotor.mavlink_system.sysid,
 										quadrotor.mavlink_system.compid,
 										&msg,
@@ -39,6 +43,17 @@ void Telemetry(void * p){
 										quadrotor.sv.rate[0],
 										quadrotor.sv.rate[1],
 										quadrotor.sv.rate[2]);
+*/
+		  mavlink_msg_attitude_pack(	quadrotor.mavlink_system.sysid,
+										  quadrotor.mavlink_system.compid,
+										  &msg,
+										  xTaskGetTickCount()/portTICK_RATE_MS,
+										  quadrotor.sv.setpoint[ROLL]*PI/180.0,
+										  quadrotor.sv.setpoint[PITCH]*PI/180.0,
+										  quadrotor.sv.setpoint[YAW]*PI/180.0,
+										  quadrotor.sv.rate[0],
+										  quadrotor.sv.rate[1],
+										  quadrotor.sv.rate[2]);
 
 			len = mavlink_msg_to_send_buffer(buf, &msg);
 			qUART_Send(UART_GROUNDCOMM,buf,len);
@@ -49,7 +64,7 @@ void Telemetry(void * p){
 									0.0, // Airspeed
 									0.0, // Groundspeed
 									250, //TODO: Change to realheading
-									quadrotor.sv.setpoint[ALTITUDE]*100,   //TODO: Change to real throtle
+									quadrotor.sv.setpoint[ALTITUDE]*100,
 									quadrotor.sv.altitude,
 									0.0  //TODO: Change to ascent rate
 									);
