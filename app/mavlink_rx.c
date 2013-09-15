@@ -154,7 +154,7 @@ void Communications(void * pvParameters){
     xTaskCreate( ParameterSend, "PARAMS", 300, NULL, tskIDLE_PRIORITY+1,  &paramListHandle  );
 
 	for (;;){
-		if (pdTRUE == xSemaphoreTake(DataSmphr,500/portTICK_RATE_MS)){
+		if (pdTRUE == xSemaphoreTake(DataSmphr,1500/portTICK_RATE_MS)){
 			switch(msg.msgid){
 				case MAVLINK_MSG_ID_HEARTBEAT:
 					if (rx_led==0){
@@ -232,6 +232,12 @@ void Communications(void * pvParameters){
 
 		}else{
 			// Timeout to get a new joystick commands, values to 0
+			quadrotor.mavlink_system.state = MAV_STATE_STANDBY;
+			quadrotor.mavlink_system.mode &= ~MAV_MODE_FLAG_SAFETY_ARMED;
+			qESC_SetOutput(MOTOR1,0);
+			qESC_SetOutput(MOTOR2,0);
+			qESC_SetOutput(MOTOR3,0);
+			qESC_SetOutput(MOTOR4,0);
 		}
 	}
 }

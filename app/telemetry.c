@@ -32,18 +32,19 @@ void Telemetry(void * p){
 	while(1){
 		if (qUARTStatus[UART_GROUNDCOMM]==DEVICE_READY){
 
-/*
+
 			mavlink_msg_attitude_pack(	quadrotor.mavlink_system.sysid,
 										quadrotor.mavlink_system.compid,
 										&msg,
 										xTaskGetTickCount()/portTICK_RATE_MS,
-										quadrotor.sv.attitude[0],
-										quadrotor.sv.attitude[1],
-										quadrotor.sv.attitude[2],
+										quadrotor.sv.attitude[0]*PI/180.0,
+										quadrotor.sv.attitude[1]*PI/180.0,
+										quadrotor.sv.attitude[2]*PI/180.0,
 										quadrotor.sv.rate[0],
 										quadrotor.sv.rate[1],
 										quadrotor.sv.rate[2]);
-*/
+
+/* Tricky HUD with joystick mapping
 		  mavlink_msg_attitude_pack(	quadrotor.mavlink_system.sysid,
 										  quadrotor.mavlink_system.compid,
 										  &msg,
@@ -54,7 +55,7 @@ void Telemetry(void * p){
 										  quadrotor.sv.rate[0],
 										  quadrotor.sv.rate[1],
 										  quadrotor.sv.rate[2]);
-
+*/
 			len = mavlink_msg_to_send_buffer(buf, &msg);
 			qUART_Send(UART_GROUNDCOMM,buf,len);
 

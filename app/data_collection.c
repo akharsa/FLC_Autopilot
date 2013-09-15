@@ -34,8 +34,11 @@
 xSemaphoreHandle mpuSempahore;
 uint8_t prescaler = 0;
 
+#define PI 3.14159265359
+
 #define ATTI_THRESHOLD 3.0
 float atti_bias[3];
+float control[4]={0.0};
 
 uint8_t MPU6050_dmpGetEuler(float *euler, int32_t q[]) {
 
@@ -102,11 +105,21 @@ void DataCollection(void *p){
 		// Wait here for MPU DMP interrupt at 200Hz
 		xSemaphoreTake(mpuSempahore,portMAX_DELAY); //FIXME: instead of portMAX it would be nice to have a time out for errors
 
+		//-----------------------------------------------------------------------
+		// Data input stage
+		//-----------------------------------------------------------------------
+
 		portENTER_CRITICAL();
 		dmp_read_fifo(gyro, accel, quat, NULL, &sensors, &more);
 		portEXIT_CRITICAL();
 
 		MPU6050_dmpGetEuler(atti_buffer,quat);
+
+		atti_buffer[0] = atti_buffer[0]*180.0/PI;
+		atti_buffer[1] = atti_buffer[1]*180.0/PI;
+		atti_buffer[2] = atti_buffer[2]*180.0/PI;
+
+
 
 #if USE_BAROMETER
 		//quadrotor.sv.temperature = BMP085_GetTemperature();
@@ -127,7 +140,7 @@ void DataCollection(void *p){
 			atti_bias[PITCH] = -atti_buffer[1];
 			atti_bias[YAW] = atti_buffer[0];
 
-			/*
+
 			uint8_t i;
 			for (i=0;i<3;i++){
 				qPID_Init(&quadrotor.rateController[i]);
@@ -136,16 +149,15 @@ void DataCollection(void *p){
 			for (i=0;i<3;i++){
 				qPID_Init(&quadrotor.attiController[i]);
 			}
-			*/
+
 		}
 
 		quadrotor.sv.attitude[0] = atti_buffer[2] - atti_bias[ROLL];
 		quadrotor.sv.attitude[1] = -atti_buffer[1] - atti_bias[PITCH];
 		quadrotor.sv.attitude[2] = atti_buffer[0] - atti_bias[YAW];
-		quadrotor.sv.rate[0] = -atti_buffer[0]/scale;
-		quadrotor.sv.rate[1] = atti_buffer[1]/scale;
-		quadrotor.sv.rate[2] = -atti_buffer[2]/scale;
-
+		quadrotor.sv.rate[ROLL] = -gyro[0]/scale;
+		quadrotor.sv.rate[PITCH] = gyro[1]/scale;
+		quadrotor.sv.rate[YAW] = -gyro[2]/scale;
 
 		// The axis correspond to the assigment on the qground control and the mapping of the mavlink_control functions.
 		quadrotor.sv.setpoint[ALTITUDE] = map((quadrotor.mavlink_control.z < 100)?0:quadrotor.mavlink_control.z,0,1000,0.0,1.0);
@@ -153,10 +165,32 @@ void DataCollection(void *p){
 		quadrotor.sv.setpoint[PITCH] = map(quadrotor.mavlink_control.x,-1000,1000,-40.0,40.0);
 		quadrotor.sv.setpoint[YAW] = map(quadrotor.mavlink_control.r,-1000,1000,-180.0,180.0);
 
-		quadrotor.sv.motorOutput[0] = K_Z*quadrotor.sv.setpoint[ALTITUDE];
-		quadrotor.sv.motorOutput[1] = K_Z*quadrotor.sv.setpoint[ALTITUDE];
-		quadrotor.sv.motorOutput[2] = K_Z*quadrotor.sv.setpoint[ALTITUDE];
-		quadrotor.sv.motorOutput[3] = K_Z*quadrotor.sv.setpoint[ALTITUDE];
+		//-----------------------------------------------------------------------
+		// Controller processing stage
+		//-----------------------------------------------------------------------
+
+		// CAS
+		quadrotor.sv.attiCtrlOutput[ROLL] = qPID_Procees(&quadrotor.attiController[ROLL],quadrotor.sv.setpoint[ROLL],quadrotor.sv.attitude[ROLL]);
+		quadrotor.sv.attiCtrlOutput[PITCH] = qPID_Procees(&quadrotor.attiController[PITCH],quadrotor.sv.setpoint[PITCH],quadrotor.sv.attitude[PITCH]);
+		// SAS
+		quadrotor.sv.rateCtrlOutput[ROLL] = qPID_Procees(&quadrotor.rateController[ROLL],quadrotor.sv.attiCtrlOutput[ROLL],quadrotor.sv.rate[ROLL]);
+		quadrotor.sv.rateCtrlOutput[PITCH] = qPID_Procees(&quadrotor.rateController[PITCH],quadrotor.sv.attiCtrlOutput[PITCH],quadrotor.sv.rate[PITCH]);
+		quadrotor.sv.rateCtrlOutput[YAW] = qPID_Procees(&quadrotor.rateController[YAW],quadrotor.sv.setpoint[YAW],quadrotor.sv.rate[YAW]);
+
+
+		//-----------------------------------------------------------------------
+		// Control Output stage
+		//-----------------------------------------------------------------------
+
+		control[ROLL] = quadrotor.sv.rateCtrlOutput[ROLL];
+		control[PITCH] =  quadrotor.sv.rateCtrlOutput[PITCH];
+		control[YAW] = -quadrotor.sv.rateCtrlOutput[YAW]; //FIXME: there is a problem with the sign (maybe in the Mq)
+		control[ALTITUDE] = quadrotor.sv.setpoint[ALTITUDE];
+
+		quadrotor.sv.motorOutput[0] = (	control[ALTITUDE]*K_Z - control[ROLL]*K_PHI - control[PITCH]*K_THETA - control[YAW]*K_PSI	);
+		quadrotor.sv.motorOutput[1] = (	control[ALTITUDE]*K_Z - control[ROLL]*K_PHI + control[PITCH]*K_THETA + control[YAW]*K_PSI	);
+		quadrotor.sv.motorOutput[2] = (	control[ALTITUDE]*K_Z + control[ROLL]*K_PHI + control[PITCH]*K_THETA - control[YAW]*K_PSI	);
+		quadrotor.sv.motorOutput[3] = (	control[ALTITUDE]*K_Z + control[ROLL]*K_PHI - control[PITCH]*K_THETA + control[YAW]*K_PSI	);
 
 		if ((quadrotor.mavlink_system.mode & MAV_MODE_FLAG_SAFETY_ARMED) == 0){
 			qESC_SetOutput(MOTOR1,0);
@@ -176,6 +210,8 @@ void DataCollection(void *p){
 			qESC_SetOutput(MOTOR3,quadrotor.sv.motorOutput[2]);
 			qESC_SetOutput(MOTOR4,quadrotor.sv.motorOutput[3]);
 		}
+
+
 	}
 
 }

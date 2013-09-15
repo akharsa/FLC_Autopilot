@@ -158,13 +158,57 @@ void hardware_init(void * p){
 		qPID_Init(&quadrotor.attiController[i]);
 	}
 
+
+	quadrotor.rateController[ROLL].K = 0.01;
+	quadrotor.rateController[ROLL].Ti = 1/0.1;
+	quadrotor.rateController[ROLL].Td = 0.0;
+	quadrotor.rateController[ROLL].Nd = 5.0;
+
+	quadrotor.rateController[PITCH].K = 0.01;
+	quadrotor.rateController[PITCH].Ti = 1/0.1;
+	quadrotor.rateController[PITCH].Td = 0.0;
+	quadrotor.rateController[PITCH].Nd = 5.0;
+	// --------------------------------------------------------
+	quadrotor.attiController[ROLL].K = 1.0;
+	quadrotor.attiController[ROLL].Ti = 1/0.02;
+	quadrotor.attiController[ROLL].Td = 0.0;
+	quadrotor.attiController[ROLL].Nd = 4.0;
+
+	quadrotor.attiController[PITCH].K = 1.0;
+	quadrotor.attiController[PITCH].Ti = 1/0.02;
+	quadrotor.attiController[PITCH].Td = 0.0;
+	quadrotor.attiController[PITCH].Nd = 4.0;
+	// --------------------------------------------------------
+	quadrotor.rateController[YAW].K = 0.05;
+	quadrotor.rateController[YAW].Ti = 1/0.1;
+	quadrotor.rateController[YAW].Td = 0.000;
+	quadrotor.rateController[YAW].Nd = 5;
+
+	quadrotor.attiController[YAW].K = 5;
+	quadrotor.attiController[YAW].Ti = 1/0.05;
+	quadrotor.attiController[YAW].Td = 0.0;
+	quadrotor.attiController[YAW].Nd = 4;
+	// --------------------------------------------------------
 	//TODO: Aca va tambien la inicialización del controlador de altura
 
+	qESC_SetOutput(MOTOR1,300);
+	qESC_SetOutput(MOTOR1,0);
+
+	qESC_SetOutput(MOTOR2,300);
+	qESC_SetOutput(MOTOR2,0);
+
+	qESC_SetOutput(MOTOR3,300);
+	qESC_SetOutput(MOTOR3,0);
+
+	qESC_SetOutput(MOTOR4,300);
+	qESC_SetOutput(MOTOR4,0);
 	//=========================================================================
 	quadrotor.mavlink_system.state = MAV_STATE_STANDBY;
 	xTaskCreate( Telemetry, "TLM", 300, NULL, tskIDLE_PRIORITY+1, NULL );
 	xTaskCreate( DataCollection, "DATCOL", 500, NULL, tskIDLE_PRIORITY+2, NULL );
 
 	vTaskDelete(NULL);
+
+
 }
 
