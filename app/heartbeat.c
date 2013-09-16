@@ -18,10 +18,7 @@
 #include "mavlink.h"
 #include "mavlink_bridge.h"
 #include "qUART.h"
-
-#define MAX_TASKS	5
-char task_names[MAX_TASKS][20];
-uint32_t task_usage[MAX_TASKS];
+#include "tasks.h"
 
 void MAVLink_Heartbeat(void *p){
 	portTickType xLastWakeTime;
@@ -79,6 +76,7 @@ void MAVLink_Heartbeat(void *p){
 
 		}
 
+		uint32_t stack_free = uxTaskGetStackHighWaterMark(NULL);
 		vTaskDelayUntil( &xLastWakeTime, 1000/portTICK_RATE_MS);
 
 		/*

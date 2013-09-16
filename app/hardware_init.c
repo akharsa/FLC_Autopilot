@@ -31,18 +31,14 @@
 #include "math.h"
 #include "qESC.h"
 #include "qAnalog.h"
-
-//TODO: Sacar esto de aca!
-void DataCollection(void * p);
-void Distance(void *);
-void Telemetry(void *);
-void beacon(void *p);
+#include "tasks.h"
 
 xTaskHandle beacon_hnd;
 
 
 void hardware_init(void * p){
 	uint16_t i;
+	portBASE_TYPE ret;
 
 	// =========================================================
 	// Early init will turn the motors off for safety if a reset occurs
@@ -212,28 +208,18 @@ void hardware_init(void * p){
 	qAnalog_InitPin(TEMPERATURE_ANALOG);
 	qAnalog_InitPin(VOLTAGE_ANALOG);
 
-/*
-	qESC_SetOutput(MOTOR1,300);
-	qESC_SetOutput(MOTOR1,0);
-
-	qESC_SetOutput(MOTOR2,300);
-	qESC_SetOutput(MOTOR2,0);
-
-	qESC_SetOutput(MOTOR3,300);
-	qESC_SetOutput(MOTOR3,0);
-
-	qESC_SetOutput(MOTOR4,300);
-	qESC_SetOutput(MOTOR4,0);
-*/
 	//=========================================================================
-	//quadrotor.mavlink_system.state = MAV_STATE_STANDBY;
-
 	quadrotor.mavlink_system.state = MAV_STATE_ACTIVE;
 	quadrotor.mavlink_system.mode |= MAV_MODE_FLAG_SAFETY_ARMED;
 	quadrotor.mode = ESC_STANDBY;
-	xTaskCreate( Telemetry, "TLM", 300, NULL, tskIDLE_PRIORITY+1, NULL );
-	xTaskCreate( DataCollection, "DATCOL", 500, NULL, tskIDLE_PRIORITY+2, NULL );
-	xTaskCreate( beacon, "BEACON", 200, NULL, tskIDLE_PRIORITY+1, NULL);
+	quadrotor.mavlink_system.nav_mode = NAV_ATTI;
+
+	//uint32_t stack_free = uxTaskGetStackHighWaterMark(NULL);
+	ret = xTaskCreate( DataCollection, "DATCOL", 500, NULL, tskIDLE_PRIORITY+3, NULL );
+	ret = xTaskCreate( Telemetry, "TLM", 300, NULL, tskIDLE_PRIORITY+1, NULL );
+	ret = xTaskCreate( MAVLink_Heartbeat, "HEARTBEAT", 300, NULL, tskIDLE_PRIORITY+2, NULL ); //STACK OK
+	ret = xTaskCreate( Communications, "COMMS", 300, NULL, tskIDLE_PRIORITY+1, NULL );
+	ret = xTaskCreate( beacon, "BEACON", 30, NULL, tskIDLE_PRIORITY+1, NULL);
 
 	vTaskDelete(NULL);
 

@@ -25,6 +25,7 @@ void beacon(void * pvParameters){
 			for (i=1;i<5;i++) qLed_TurnOff(leds[i]);
 			vTaskDelay(50/portTICK_RATE_MS);
 		}
+		//uint32_t stack_free = uxTaskGetStackHighWaterMark(NULL);
 		vTaskDelay(800/portTICK_RATE_MS);
 	}
 }

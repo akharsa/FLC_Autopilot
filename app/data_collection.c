@@ -175,6 +175,7 @@ void DataCollection(void *p){
 		// CAS
 		quadrotor.sv.attiCtrlOutput[ROLL] = qPID_Procees(&quadrotor.attiController[ROLL],quadrotor.sv.setpoint[ROLL],quadrotor.sv.attitude[ROLL]);
 		quadrotor.sv.attiCtrlOutput[PITCH] = qPID_Procees(&quadrotor.attiController[PITCH],quadrotor.sv.setpoint[PITCH],quadrotor.sv.attitude[PITCH]);
+
 		// SAS
 		quadrotor.sv.rateCtrlOutput[ROLL] = qPID_Procees(&quadrotor.rateController[ROLL],quadrotor.sv.attiCtrlOutput[ROLL],quadrotor.sv.rate[ROLL]);
 		quadrotor.sv.rateCtrlOutput[PITCH] = qPID_Procees(&quadrotor.rateController[PITCH],quadrotor.sv.attiCtrlOutput[PITCH],quadrotor.sv.rate[PITCH]);
@@ -185,8 +186,6 @@ void DataCollection(void *p){
 			prescaler = PRESCALER_VALUE;
 			quadrotor.sv.altitudeCtrlOutput = qPID_Procees(&quadrotor.altitudeController,quadrotor.sv.setpoint[ALTITUDE],quadrotor.sv.altitude);
 		}
-
-
 
 		//-----------------------------------------------------------------------
 		// Control Output stage

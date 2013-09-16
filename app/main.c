@@ -23,12 +23,11 @@
 
 #include "math.h"
 
-void hardware_init(void *);
-void MAVLink_Heartbeat(void *);
+#include "tasks.h"
 
 void Communications(void *);
 void AppMain(void){
-
+	portBASE_TYPE ret;
 
 	quadrotor.mavlink_system.sysid = 20;
 	quadrotor.mavlink_system.compid = 01;
@@ -37,9 +36,8 @@ void AppMain(void){
 	quadrotor.mavlink_system.mode = MAV_MODE_FLAG_MANUAL_INPUT_ENABLED;
 	quadrotor.mavlink_system.nav_mode = MAV_AUTOPILOT_GENERIC;
 
-	xTaskCreate( hardware_init, "HW_INIT", 300, NULL, tskIDLE_PRIORITY+1, NULL );
-	xTaskCreate( MAVLink_Heartbeat, "HEARTBEAT", 300, NULL, tskIDLE_PRIORITY+2, NULL );
-	xTaskCreate( Communications, "COMMS", 300, NULL, tskIDLE_PRIORITY+1, NULL );
+	ret = xTaskCreate( hardware_init, "HW_INIT", 150, NULL, tskIDLE_PRIORITY+3, NULL ); //STACK OK,
+
 
 	vTaskStartScheduler();
 	while(1);
