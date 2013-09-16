@@ -203,9 +203,9 @@ void hardware_init(void * p){
 	quadrotor.attiController[YAW].Td = 0.0;
 	quadrotor.attiController[YAW].Nd = 4;
 	// --------------------------------------------------------
-	quadrotor.altitudeController.K = 1.0;
-	quadrotor.altitudeController.Ti = 1/1.5;
-	quadrotor.altitudeController.Td = 0.3	;
+	quadrotor.altitudeController.K = 0.85;
+	quadrotor.altitudeController.Ti = 1/1.4;
+	quadrotor.altitudeController.Td = 0.2;
 	quadrotor.altitudeController.Nd = 8;
 
 	qAnalog_Init();
