@@ -30,11 +30,15 @@
 #include "ultrasonic_sensor.h"
 #include "math.h"
 #include "qESC.h"
+#include "qAnalog.h"
 
 //TODO: Sacar esto de aca!
 void DataCollection(void * p);
 void Distance(void *);
 void Telemetry(void *);
+void beacon(void *p);
+
+xTaskHandle beacon_hnd;
 
 
 void hardware_init(void * p){
@@ -127,13 +131,13 @@ void hardware_init(void * p){
 	quadrotor.mavlink_system.state = MAV_STATE_CALIBRATING;
 
 	quadrotor.sv.floor_pressure = 0.0;
-
+/*
 	for (i=0;i<100;i++){
 		BMP085_GetTemperature();
 		quadrotor.sv.floor_pressure += BMP085_GetPressure()/100.0;
 		vTaskDelay(10/portTICK_RATE_MS);
 	}
-
+*/
 	for (i=0;i<3;i++){
 		quadrotor.rateController[i].AntiWindup = ENABLED;
 		quadrotor.rateController[i].Bumpless = ENABLED;
@@ -158,6 +162,16 @@ void hardware_init(void * p){
 		qPID_Init(&quadrotor.attiController[i]);
 	}
 
+
+	quadrotor.altitudeController.AntiWindup = ENABLED;
+	quadrotor.altitudeController.Bumpless = ENABLED;
+	quadrotor.altitudeController.Mode = AUTOMATIC;
+	quadrotor.altitudeController.OutputMax = 0.9;
+	quadrotor.altitudeController.OutputMin = 0.0;
+	quadrotor.altitudeController.Ts = 0.05;
+	quadrotor.altitudeController.b = 1.0;
+	quadrotor.altitudeController.c = 0.0;
+	qPID_Init(&quadrotor.altitudeController);
 
 	quadrotor.rateController[ROLL].K = 0.01;
 	quadrotor.rateController[ROLL].Ti = 1/0.1;
@@ -189,8 +203,16 @@ void hardware_init(void * p){
 	quadrotor.attiController[YAW].Td = 0.0;
 	quadrotor.attiController[YAW].Nd = 4;
 	// --------------------------------------------------------
-	//TODO: Aca va tambien la inicialización del controlador de altura
+	quadrotor.altitudeController.K = 0.50;
+	quadrotor.altitudeController.Ti = 1/1.50;
+	quadrotor.altitudeController.Td = 0.000;
+	quadrotor.altitudeController.Nd = 5;
 
+	qAnalog_Init();
+	qAnalog_InitPin(TEMPERATURE_ANALOG);
+	qAnalog_InitPin(VOLTAGE_ANALOG);
+
+/*
 	qESC_SetOutput(MOTOR1,300);
 	qESC_SetOutput(MOTOR1,0);
 
@@ -202,10 +224,16 @@ void hardware_init(void * p){
 
 	qESC_SetOutput(MOTOR4,300);
 	qESC_SetOutput(MOTOR4,0);
+*/
 	//=========================================================================
-	quadrotor.mavlink_system.state = MAV_STATE_STANDBY;
+	//quadrotor.mavlink_system.state = MAV_STATE_STANDBY;
+
+	quadrotor.mavlink_system.state = MAV_STATE_ACTIVE;
+	quadrotor.mavlink_system.mode |= MAV_MODE_FLAG_SAFETY_ARMED;
+	quadrotor.mode = ESC_STANDBY;
 	xTaskCreate( Telemetry, "TLM", 300, NULL, tskIDLE_PRIORITY+1, NULL );
 	xTaskCreate( DataCollection, "DATCOL", 500, NULL, tskIDLE_PRIORITY+2, NULL );
+	xTaskCreate( beacon, "BEACON", 200, NULL, tskIDLE_PRIORITY+1, NULL);
 
 	vTaskDelete(NULL);
 

@@ -31,8 +31,10 @@
 #include "ultrasonic_sensor.h"
 #include "qESC.h"
 
+#define PRESCALER_VALUE 10
 xSemaphoreHandle mpuSempahore;
-uint8_t prescaler = 0;
+uint8_t prescaler = PRESCALER_VALUE;
+float z_bias;
 
 #define PI 3.14159265359
 
@@ -90,6 +92,7 @@ void DataCollection(void *p){
 	float bmp_temp, pressure, alt=0.0, c;
 	uint16_t i;
 
+
 	mpu_get_gyro_sens(&scale);
 	vSemaphoreCreateBinary(mpuSempahore);
 	xSemaphoreTake(mpuSempahore,0);
@@ -99,7 +102,7 @@ void DataCollection(void *p){
 	c = 0.1;
 
 	//===========================================
-	prescaler = 10;
+	prescaler = PRESCALER_VALUE;
 	while(1){
 
 		// Wait here for MPU DMP interrupt at 200Hz
@@ -127,10 +130,7 @@ void DataCollection(void *p){
 		//quadrotor.sv.altitude =  c*BMP085_CalculateAltitude(quadrotor.sv.floor_pressure, quadrotor.sv.current_pressure) + (1-c)*quadrotor.sv.altitude;
 #endif
 
-		if (prescaler-- == 0){
-			RangeFinder_getDistance();
-			prescaler = 10;
-		}
+
 
 
 		// --------------------- Biasing ---------------------
@@ -149,8 +149,10 @@ void DataCollection(void *p){
 			for (i=0;i<3;i++){
 				qPID_Init(&quadrotor.attiController[i]);
 			}
+			qPID_Init(&quadrotor.altitudeController);
 
 		}
+
 
 		quadrotor.sv.attitude[0] = atti_buffer[2] - atti_bias[ROLL];
 		quadrotor.sv.attitude[1] = -atti_buffer[1] - atti_bias[PITCH];
@@ -160,7 +162,8 @@ void DataCollection(void *p){
 		quadrotor.sv.rate[YAW] = -gyro[2]/scale;
 
 		// The axis correspond to the assigment on the qground control and the mapping of the mavlink_control functions.
-		quadrotor.sv.setpoint[ALTITUDE] = map((quadrotor.mavlink_control.z < 100)?0:quadrotor.mavlink_control.z,0,1000,0.0,1.0);
+		//quadrotor.sv.setpoint[ALTITUDE] = 0.5;
+		//z_bias = map((quadrotor.mavlink_control.z < 100)?0:quadrotor.mavlink_control.z,0,1000,0.0,1.0);
 		quadrotor.sv.setpoint[ROLL] = map(quadrotor.mavlink_control.y,-1000,1000,-40.0,40.0);
 		quadrotor.sv.setpoint[PITCH] = map(quadrotor.mavlink_control.x,-1000,1000,-40.0,40.0);
 		quadrotor.sv.setpoint[YAW] = map(quadrotor.mavlink_control.r,-1000,1000,-180.0,180.0);
@@ -177,6 +180,13 @@ void DataCollection(void *p){
 		quadrotor.sv.rateCtrlOutput[PITCH] = qPID_Procees(&quadrotor.rateController[PITCH],quadrotor.sv.attiCtrlOutput[PITCH],quadrotor.sv.rate[PITCH]);
 		quadrotor.sv.rateCtrlOutput[YAW] = qPID_Procees(&quadrotor.rateController[YAW],quadrotor.sv.setpoint[YAW],quadrotor.sv.rate[YAW]);
 
+		if (prescaler-- == 0){
+			RangeFinder_getDistance();
+			prescaler = PRESCALER_VALUE;
+			quadrotor.sv.altitudeCtrlOutput = qPID_Procees(&quadrotor.altitudeController,quadrotor.sv.setpoint[ALTITUDE],quadrotor.sv.altitude);
+		}
+
+
 
 		//-----------------------------------------------------------------------
 		// Control Output stage
@@ -185,14 +195,14 @@ void DataCollection(void *p){
 		control[ROLL] = quadrotor.sv.rateCtrlOutput[ROLL];
 		control[PITCH] =  quadrotor.sv.rateCtrlOutput[PITCH];
 		control[YAW] = -quadrotor.sv.rateCtrlOutput[YAW]; //FIXME: there is a problem with the sign (maybe in the Mq)
-		control[ALTITUDE] = quadrotor.sv.setpoint[ALTITUDE];
+		control[ALTITUDE] = quadrotor.sv.altitudeCtrlOutput;
 
 		quadrotor.sv.motorOutput[0] = (	control[ALTITUDE]*K_Z - control[ROLL]*K_PHI - control[PITCH]*K_THETA - control[YAW]*K_PSI	);
 		quadrotor.sv.motorOutput[1] = (	control[ALTITUDE]*K_Z - control[ROLL]*K_PHI + control[PITCH]*K_THETA + control[YAW]*K_PSI	);
 		quadrotor.sv.motorOutput[2] = (	control[ALTITUDE]*K_Z + control[ROLL]*K_PHI + control[PITCH]*K_THETA - control[YAW]*K_PSI	);
 		quadrotor.sv.motorOutput[3] = (	control[ALTITUDE]*K_Z + control[ROLL]*K_PHI - control[PITCH]*K_THETA + control[YAW]*K_PSI	);
 
-		if ((quadrotor.mavlink_system.mode & MAV_MODE_FLAG_SAFETY_ARMED) == 0){
+		if (quadrotor.mode == ESC_STANDBY){
 			qESC_SetOutput(MOTOR1,0);
 			qESC_SetOutput(MOTOR2,0);
 			qESC_SetOutput(MOTOR3,0);

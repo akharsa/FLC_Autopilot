@@ -24,6 +24,7 @@
 #include "eeprom.h"
 #include "qESC.h"
 
+
 static int packet_drops = 0;
 mavlink_message_t msg;
 mavlink_status_t status;
@@ -170,12 +171,10 @@ void Communications(void * pvParameters){
 
 					switch (mavlink_msg_command_long_get_command(&msg)){
 					case MAV_CMD_NAV_TAKEOFF:
-						quadrotor.mavlink_system.state = MAV_STATE_ACTIVE;
-						quadrotor.mavlink_system.mode |= MAV_MODE_FLAG_SAFETY_ARMED;
+						quadrotor.sv.setpoint[ALTITUDE] = 0.7;
 						break;
 					case MAV_CMD_NAV_LAND:
-						quadrotor.mavlink_system.state = MAV_STATE_STANDBY;
-						quadrotor.mavlink_system.mode &= ~MAV_MODE_FLAG_SAFETY_ARMED;
+						quadrotor.sv.setpoint[ALTITUDE] = 0.0;
 						break;
 					case MAV_CMD_COMPONENT_ARM_DISARM:
 						if (mavlink_msg_command_long_get_param1(&msg)==1){
@@ -204,9 +203,9 @@ void Communications(void * pvParameters){
 					case MAVLINK_MSG_ID_MANUAL_CONTROL:
 						mavlink_msg_manual_control_decode(&msg,&quadrotor.mavlink_control);
 						if ((quadrotor.mavlink_control.buttons & 256)==0){
-							quadrotor.mavlink_system.state = MAV_STATE_STANDBY;
-							quadrotor.mavlink_system.mode &= ~MAV_MODE_FLAG_SAFETY_ARMED;
+							quadrotor.mode = ESC_STANDBY;
 						}else{
+							quadrotor.mode = ESC_ARMED;
 							/*
 							quadrotor.sv.setpoint[ALTITUDE] = ((quadrotor.mavlink_control.x+1000.0)/2000.0)*500.0;
 							qESC_SetOutput(MOTOR1,quadrotor.sv.setpoint[ALTITUDE]);
@@ -232,8 +231,7 @@ void Communications(void * pvParameters){
 
 		}else{
 			// Timeout to get a new joystick commands, values to 0
-			quadrotor.mavlink_system.state = MAV_STATE_STANDBY;
-			quadrotor.mavlink_system.mode &= ~MAV_MODE_FLAG_SAFETY_ARMED;
+			quadrotor.mode = ESC_STANDBY;
 			qESC_SetOutput(MOTOR1,0);
 			qESC_SetOutput(MOTOR2,0);
 			qESC_SetOutput(MOTOR3,0);

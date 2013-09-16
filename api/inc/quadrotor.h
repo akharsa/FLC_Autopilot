@@ -22,6 +22,8 @@
 #define K_THETA	200
 #define K_PSI	300
 
+typedef enum {ESC_STANDBY=0, ESC_ARMED} mode_t;
+
 typedef struct {
 	float rate[3];
 	float attitude[3];
@@ -31,6 +33,7 @@ typedef struct {
 	uint16_t motorOutput[4];
 	uint32_t time;
 	float altitude;
+	float altitudeCtrlOutput;
 	float floor_pressure;
 	float current_pressure;
 	float temperature;
@@ -50,6 +53,7 @@ typedef struct {
 	mavlink_system_t mavlink_system;
 	mavlink_manual_control_t mavlink_control;
 	uint16_t sysload;
+	mode_t mode;
 }quadrotor_t;
 
 extern quadrotor_t quadrotor;

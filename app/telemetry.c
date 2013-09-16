@@ -29,9 +29,9 @@ void Telemetry(void * p){
 	portTickType xLastWakeTime;
 	xLastWakeTime = xTaskGetTickCount ();
 
+
 	while(1){
 		if (qUARTStatus[UART_GROUNDCOMM]==DEVICE_READY){
-
 
 			mavlink_msg_attitude_pack(	quadrotor.mavlink_system.sysid,
 										quadrotor.mavlink_system.compid,
@@ -65,7 +65,7 @@ void Telemetry(void * p){
 									0.0, // Airspeed
 									0.0, // Groundspeed
 									250, //TODO: Change to realheading
-									quadrotor.sv.setpoint[ALTITUDE]*100,
+									quadrotor.sv.altitudeCtrlOutput*100,
 									quadrotor.sv.altitude,
 									0.0  //TODO: Change to ascent rate
 									);

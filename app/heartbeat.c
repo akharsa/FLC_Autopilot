@@ -42,6 +42,11 @@ void MAVLink_Heartbeat(void *p){
 				}
 			}
 
+			uint16_t voltage;
+			voltage = qAnalog_Read(VOLTAGE_ANALOG);
+			voltage = voltage*3300/4096;
+			voltage = (voltage*764)/100;
+
 
 			mavlink_msg_heartbeat_pack(	quadrotor.mavlink_system.sysid,
 										quadrotor.mavlink_system.compid,
@@ -63,7 +68,7 @@ void MAVLink_Heartbeat(void *p){
 										SENSOR_GYRO | SENSOR_ACC | SENSOR_MAG | SENSOR_ABS_PRESSURE,
 										SENSOR_GYRO | SENSOR_ACC | SENSOR_MAG | SENSOR_ABS_PRESSURE, //Sensors health
 										quadrotor.sysload,
-										10700, //TODO: change to battery voltage in mV
+										voltage, //TODO: change to battery voltage in mV
 										-1,	//Battery current not measured
 										-1, //Battery SoC not measured
 										1,2,3,4,5,6); //Error counts
