@@ -166,9 +166,9 @@ void hardware_init(void * p){
 	quadrotor.altitudeController.AntiWindup = ENABLED;
 	quadrotor.altitudeController.Bumpless = ENABLED;
 	quadrotor.altitudeController.Mode = AUTOMATIC;
-	quadrotor.altitudeController.OutputMax = 0.9;
+	quadrotor.altitudeController.OutputMax = 1.0;
 	quadrotor.altitudeController.OutputMin = 0.0;
-	quadrotor.altitudeController.Ts = 0.05;
+	quadrotor.altitudeController.Ts = 0.025;
 	quadrotor.altitudeController.b = 1.0;
 	quadrotor.altitudeController.c = 0.0;
 	qPID_Init(&quadrotor.altitudeController);
@@ -203,10 +203,10 @@ void hardware_init(void * p){
 	quadrotor.attiController[YAW].Td = 0.0;
 	quadrotor.attiController[YAW].Nd = 4;
 	// --------------------------------------------------------
-	quadrotor.altitudeController.K = 0.50;
-	quadrotor.altitudeController.Ti = 1/1.50;
-	quadrotor.altitudeController.Td = 0.000;
-	quadrotor.altitudeController.Nd = 5;
+	quadrotor.altitudeController.K = 2.0;
+	quadrotor.altitudeController.Ti = 1/5.0;
+	quadrotor.altitudeController.Td = 0.5;
+	quadrotor.altitudeController.Nd = 8;
 
 	qAnalog_Init();
 	qAnalog_InitPin(TEMPERATURE_ANALOG);

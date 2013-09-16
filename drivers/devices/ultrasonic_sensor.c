@@ -31,13 +31,12 @@ TIM_MATCHCFG_Type TIM_MatchConfigStruct ;
 TIM_CAPTURECFG_Type TIM_CaptureConfigStruct;
 PINSEL_CFG_Type PinCfg;
 
-float c = 1.0 ;
+float c = 0.6 ;
 
 void TIMER3_IRQHandler(void)
 {
 	uint32_t capture;
 	float distance;
-
 	if (TIM_GetIntCaptureStatus(LPC_TIM3,0))
 	{
 		TIM_ClearIntCapturePending(LPC_TIM3,0);

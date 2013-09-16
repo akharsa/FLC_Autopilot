@@ -31,7 +31,7 @@
 #include "ultrasonic_sensor.h"
 #include "qESC.h"
 
-#define PRESCALER_VALUE 10
+#define PRESCALER_VALUE 5
 xSemaphoreHandle mpuSempahore;
 uint8_t prescaler = PRESCALER_VALUE;
 float z_bias;
