@@ -20,6 +20,7 @@
 #include "qUART.h"
 
 #define PI 3.14159265359
+extern float current_alt_sp;
 
 void Telemetry(void * p){
 	mavlink_message_t msg;
@@ -62,12 +63,12 @@ void Telemetry(void * p){
 			mavlink_msg_vfr_hud_pack(quadrotor.mavlink_system.sysid,
 									quadrotor.mavlink_system.compid,
 									&msg,
-									0.0, // Airspeed
-									0.0, // Groundspeed
+									current_alt_sp, // Airspeed
+									current_alt_sp, // Groundspeed
 									250, //TODO: Change to realheading
 									quadrotor.sv.altitudeCtrlOutput*100,
 									quadrotor.sv.altitude,
-									0.0  //TODO: Change to ascent rate
+									current_alt_sp  //TODO: Change to ascent rate
 									);
 
 			uint16_t len = mavlink_msg_to_send_buffer(buf, &msg);

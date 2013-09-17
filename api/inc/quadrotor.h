@@ -23,7 +23,7 @@
 #define K_PSI	300
 
 typedef enum {ESC_STANDBY=0, ESC_ARMED} mode_t;
-typedef enum {NAV_ACRO,NAV_ATTI,NAV_TAKEOFF,NAV_LANDING} nav_mode_t;
+typedef enum {NAV_ACRO,NAV_ATTI,NAV_TAKEOFF,NAV_LANDING, NAV_ALTHOLD} nav_mode_t;
 
 typedef struct {
 	float rate[3];

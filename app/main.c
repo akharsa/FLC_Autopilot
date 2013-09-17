@@ -34,10 +34,10 @@ void AppMain(void){
 	quadrotor.mavlink_system.type = MAV_TYPE_QUADROTOR;
 	quadrotor.mavlink_system.state = MAV_STATE_BOOT;
 	quadrotor.mavlink_system.mode = MAV_MODE_FLAG_MANUAL_INPUT_ENABLED;
-	quadrotor.mavlink_system.nav_mode = MAV_AUTOPILOT_GENERIC;
+	quadrotor.mavlink_system.nav_mode = NAV_ATTI;
 
 	ret = xTaskCreate( hardware_init, "HW_INIT", 150, NULL, tskIDLE_PRIORITY+3, NULL ); //STACK OK,
-
+	ret = xTaskCreate( MAVLink_Heartbeat, "HEARTBEAT", 300, NULL, tskIDLE_PRIORITY+2, NULL ); //STACK OK
 
 	vTaskStartScheduler();
 	while(1);

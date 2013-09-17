@@ -80,6 +80,8 @@ void EINT3_IRQHandler(void)
 	portEND_SWITCHING_ISR( xHigherPriorityTaskWoken );
 }
 
+float current_alt_sp = 0.0;
+
 void DataCollection(void *p){
 
 	int16_t gyro[3];
@@ -130,9 +132,6 @@ void DataCollection(void *p){
 		//quadrotor.sv.altitude =  c*BMP085_CalculateAltitude(quadrotor.sv.floor_pressure, quadrotor.sv.current_pressure) + (1-c)*quadrotor.sv.altitude;
 #endif
 
-
-
-
 		// --------------------- Biasing ---------------------
 
 		if ((quadrotor.mavlink_control.buttons & BTN_START) != 0){
@@ -164,6 +163,21 @@ void DataCollection(void *p){
 		// The axis correspond to the assigment on the qground control and the mapping of the mavlink_control functions.
 		//quadrotor.sv.setpoint[ALTITUDE] = 0.5;
 		//z_bias = map((quadrotor.mavlink_control.z < 100)?0:quadrotor.mavlink_control.z,0,1000,0.0,1.0);
+
+		if (quadrotor.mavlink_system.nav_mode == NAV_TAKEOFF){
+			if (current_alt_sp < quadrotor.sv.setpoint[ALTITUDE]){
+				current_alt_sp  += quadrotor.sv.setpoint[ALTITUDE] / (200.0*5.0); // 2 seconds manouver in 200 steps
+			}else{
+				//quadrotor.mavlink_system.nav_mode == NAV_ALTHOLD;
+			}
+		}else if (quadrotor.mavlink_system.nav_mode == NAV_LANDING){
+			if (current_alt_sp > 0){
+				current_alt_sp  -= quadrotor.sv.setpoint[ALTITUDE] / (200.0*5.0); // 5 seconds manouver in 200 steps
+			}else{
+				//quadrotor.mavlink_system.nav_mode == NAV_ATTI;
+			}
+		}
+
 		quadrotor.sv.setpoint[ROLL] = map(quadrotor.mavlink_control.y,-1000,1000,-40.0,40.0);
 		quadrotor.sv.setpoint[PITCH] = map(quadrotor.mavlink_control.x,-1000,1000,-40.0,40.0);
 		quadrotor.sv.setpoint[YAW] = map(quadrotor.mavlink_control.r,-1000,1000,-180.0,180.0);
@@ -184,7 +198,7 @@ void DataCollection(void *p){
 		if (prescaler-- == 0){
 			RangeFinder_getDistance();
 			prescaler = PRESCALER_VALUE;
-			quadrotor.sv.altitudeCtrlOutput = qPID_Procees(&quadrotor.altitudeController,quadrotor.sv.setpoint[ALTITUDE],quadrotor.sv.altitude);
+			quadrotor.sv.altitudeCtrlOutput = qPID_Procees(&quadrotor.altitudeController,current_alt_sp,quadrotor.sv.altitude);
 		}
 
 		//-----------------------------------------------------------------------

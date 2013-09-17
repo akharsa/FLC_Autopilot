@@ -171,10 +171,12 @@ void Communications(void * pvParameters){
 
 					switch (mavlink_msg_command_long_get_command(&msg)){
 					case MAV_CMD_NAV_TAKEOFF:
+						quadrotor.mavlink_system.nav_mode = NAV_TAKEOFF;
 						quadrotor.sv.setpoint[ALTITUDE] = 0.7;
 						break;
 					case MAV_CMD_NAV_LAND:
-						quadrotor.sv.setpoint[ALTITUDE] = 0.0;
+						quadrotor.mavlink_system.nav_mode = NAV_LANDING;
+						quadrotor.sv.setpoint[ALTITUDE] = 0.7; // Bug horrible!
 						break;
 					case MAV_CMD_COMPONENT_ARM_DISARM:
 						if (mavlink_msg_command_long_get_param1(&msg)==1){
