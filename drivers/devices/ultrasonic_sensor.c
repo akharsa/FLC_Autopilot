@@ -46,12 +46,12 @@ void TIMER3_IRQHandler(void)
 		}else{
 			capture = TIM_GetCaptureValue(LPC_TIM3,0);
 			if (capture>35000){
-				//quadrotor.sv.altitude = -100.0;
 				// I think it's better to keep the last good value instead
 			}else{
 				distance = (capture/58.0)/100.0;
-				//distance = floorf(distance * 100 + 0.5) / 100;
-				quadrotor.sv.altitude = c*distance + (1-c)*quadrotor.sv.altitude;
+				if (distance < 3.5){
+					quadrotor.sv.altitude = c*distance + (1.0-c)*quadrotor.sv.altitude;
+				}
 			}
 			TIM_Cmd(LPC_TIM3,DISABLE);
 		}
