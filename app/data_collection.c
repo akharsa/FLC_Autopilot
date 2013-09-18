@@ -87,15 +87,17 @@ void DataCollection(void *p){
 	int16_t gyro[3];
 	int16_t accel[3];
 	int32_t quat[4];
-	float scale;
+	float scale_gyro;
+	uint16_t scale_accel;
 	uint8_t more;
 	float atti_buffer[3];
 	int16_t sensors;
 	float bmp_temp, pressure, alt=0.0, c;
 	uint16_t i;
+	float second_derivate,alt_1,alt_2;
 
-
-	mpu_get_gyro_sens(&scale);
+	mpu_get_gyro_sens(&scale_gyro);
+	mpu_get_accel_sens(&scale_accel);
 	vSemaphoreCreateBinary(mpuSempahore);
 	xSemaphoreTake(mpuSempahore,0);
 	NVIC_EnableIRQ(EINT3_IRQn);
@@ -123,7 +125,6 @@ void DataCollection(void *p){
 		atti_buffer[0] = atti_buffer[0]*180.0/PI;
 		atti_buffer[1] = atti_buffer[1]*180.0/PI;
 		atti_buffer[2] = atti_buffer[2]*180.0/PI;
-
 
 
 #if USE_BAROMETER
@@ -156,9 +157,14 @@ void DataCollection(void *p){
 		quadrotor.sv.attitude[0] = atti_buffer[2] - atti_bias[ROLL];
 		quadrotor.sv.attitude[1] = -atti_buffer[1] - atti_bias[PITCH];
 		quadrotor.sv.attitude[2] = atti_buffer[0] - atti_bias[YAW];
-		quadrotor.sv.rate[ROLL] = -gyro[0]/scale;
-		quadrotor.sv.rate[PITCH] = gyro[1]/scale;
-		quadrotor.sv.rate[YAW] = -gyro[2]/scale;
+
+		quadrotor.sv.rate[ROLL] = (float)-gyro[0]/scale_gyro;
+		quadrotor.sv.rate[PITCH] = (float) gyro[1]/scale_gyro;
+		quadrotor.sv.rate[YAW] =  (float)-gyro[2]/scale_gyro;
+
+		//quadrotor.sv.accel[ROLL] =  (float)-accel[0]/scale_accel; Tricky!!
+		quadrotor.sv.accel[PITCH] =  (float)accel[1]/scale_accel;
+		quadrotor.sv.accel[YAW] =  (float)-accel[2]/scale_accel;
 
 		// The axis correspond to the assigment on the qground control and the mapping of the mavlink_control functions.
 		//quadrotor.sv.setpoint[ALTITUDE] = 0.5;
@@ -197,8 +203,16 @@ void DataCollection(void *p){
 
 		if (prescaler-- == 0){
 			RangeFinder_getDistance();
+
+			second_derivate = (quadrotor.sv.altitude-2*alt_1+alt_2)*40; //200/5 Hz
+			alt_2 = alt_1;
+			alt_1 = quadrotor.sv.altitude;
+			if (fabs(second_derivate)<5.0){
+				quadrotor.sv.altitudeCtrlOutput = qPID_Procees(&quadrotor.altitudeController,current_alt_sp,quadrotor.sv.altitude);
+			}
 			prescaler = PRESCALER_VALUE;
-			quadrotor.sv.altitudeCtrlOutput = qPID_Procees(&quadrotor.altitudeController,current_alt_sp,quadrotor.sv.altitude);
+
+
 		}
 
 		//-----------------------------------------------------------------------

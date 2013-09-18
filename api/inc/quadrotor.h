@@ -38,6 +38,7 @@ typedef struct {
 	float floor_pressure;
 	float current_pressure;
 	float temperature;
+	float accel[3];
 } SV_t;
 
 typedef struct {
