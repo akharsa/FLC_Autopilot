@@ -83,7 +83,7 @@ int mpu_set_accel_fsr(unsigned char fsr);
 int mpu_get_compass_fsr(unsigned short *fsr);
 
 int mpu_get_gyro_sens(float *sens);
-int mpu_get_accel_sens(unsigned short *sens);
+int mpu_get_accel_sens(float *sens);
 
 int mpu_get_sample_rate(unsigned short *rate);
 int mpu_set_sample_rate(unsigned short rate);

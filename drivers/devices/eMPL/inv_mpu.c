@@ -1437,26 +1437,27 @@ int mpu_get_gyro_sens(float *sens)
  *  @param[out] sens    Conversion from hardware units to g's.
  *  @return     0 if successful.
  */
-int mpu_get_accel_sens(unsigned short *sens)
+int mpu_get_accel_sens(float *sens)
 {
     switch (st.chip_cfg.accel_fsr) {
     case INV_FSR_2G:
-        sens[0] = 16384;
+        sens[0] = 16384.0;
         break;
     case INV_FSR_4G:
-        sens[0] = 8092;
+        sens[0] = 8092.0;
         break;
     case INV_FSR_8G:
-        sens[0] = 4096;
+        sens[0] = 4096.0;
         break;
     case INV_FSR_16G:
-        sens[0] = 2048;
+        sens[0] = 2048.0;
         break;
     default:
         return -1;
     }
     if (st.chip_cfg.accel_half)
-        sens[0] >>= 1;
+        //sens[0] >>= 1;
+    	sens[0] /= 2.0;
     return 0;
 }
 

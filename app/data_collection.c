@@ -42,23 +42,6 @@ float z_bias;
 float atti_bias[3];
 float control[4]={0.0};
 
-uint8_t MPU6050_dmpGetEuler(float *euler, int32_t q[]) {
-
-	float q1[4];
-	uint8_t i;
-
-	for(i = 0; i < 4; i++ ) {
-		q1[i] = ((float) (q[i]>>16)) / 16384.0f;
-	}
-
-	euler[0] = atan2(2*q1[1]*q1[2] - 2*q1[0]*q1[3], 2*q1[0]*q1[0] + 2*q1[1]*q1[1] - 1);
-	euler[1] = -asin(2*q1[1]*q1[3] + 2*q1[0]*q1[2]);
-	euler[2] = atan2(2*q1[2]*q1[3] - 2*q1[0]*q1[1], 2*q1[0]*q1[0] + 2*q1[3]*q1[3] - 1);
-
-	return 0;
-}
-
-
 uint8_t MPU6050_dmpGetAccel(float accel_0, float accel_1, float accel_2, int32_t q[]) {
 	float g[3];
 
@@ -74,18 +57,9 @@ uint8_t MPU6050_dmpGetAccel(float accel_0, float accel_1, float accel_2, int32_t
     g[1]=  -(2 * (q1[0]*q1[1] + q1[2]*q1[3]));
     g[2] = (q1[0]*q1[0] - q1[1]*q1[1] - q1[2]*q1[2] + q1[3]*q1[3]);
 
-//    quadrotor.sv.accel[ROLL] =  accel_0;
-//    quadrotor.sv.accel[PITCH] = accel_1;
-//    quadrotor.sv.accel[YAW] =   accel_2;
-
     quadrotor.sv.accel[ROLL] =  accel_0 -  g[0];
     quadrotor.sv.accel[PITCH] = accel_1 -  g[1];
     quadrotor.sv.accel[YAW] =   accel_2 -  g[2];
-
-//    quadrotor.sv.accel[ROLL] = accelRaw0 - g[0];
-//    quadrotor.sv.accel[PITCH] = accelRaw1 - g[1];
-//    quadrotor.sv.accel[YAW] = accelRaw2 - g[2];
-
 
     return 0;
 }
@@ -113,22 +87,70 @@ void EINT3_IRQHandler(void)
 
 float current_alt_sp = 0.0;
 
+typedef struct{
+	int16_t raw_gyro[3];		// Last raw measure of the gyros
+	int16_t raw_accel[3];		// Last raw measure of the accelerometers
+	float scale_gyro;			// Gyro scale in LSB/deg/sec
+	float scale_accel;			// Accel scale in LSB/g
+
+	float quat[4];				// Calculated quaternion
+	float angular_velocity[3];  // Scaled angular velocity in deg/sec
+	float acceleration[3];		// Scaled acceleration in m/sec
+	float attitude[3]; 			// Euler angles in roll, pitch, yaw format in deg
+}IMU_t;
+
+IMU_t mpu;
+
+void ReadAttiSensor(){
+	int16_t sensors;
+	uint8_t more;
+	uint8_t i;
+	int32_t q[4];
+	float atti_buffer[3];
+
+	portENTER_CRITICAL();
+	dmp_read_fifo(mpu.raw_gyro, mpu.raw_accel, q, NULL, &sensors, &more);
+
+	for(i = 0; i < 4; i++ ) {
+		mpu.quat[i] = ((float) (q[i]>>16)) / mpu.scale_accel;
+	}
+	portEXIT_CRITICAL();
+
+	// Transform quaternion into roll, pitch, yaw euler angles
+	atti_buffer[ROLL] = atan2(2*mpu.quat[1]*mpu.quat[2] - 2*mpu.quat[0]*mpu.quat[3], 2*mpu.quat[0]*mpu.quat[0] + 2*mpu.quat[1]*mpu.quat[1] - 1);
+	atti_buffer[PITCH] = asin(2*mpu.quat[1]*mpu.quat[3] + 2*mpu.quat[0]*mpu.quat[2]);
+	atti_buffer[YAW] = atan2(2*mpu.quat[2]*mpu.quat[3] - 2*mpu.quat[0]*mpu.quat[1], 2*mpu.quat[0]*mpu.quat[0] + 2*mpu.quat[3]*mpu.quat[3] - 1);
+
+	// Rad to deg
+	mpu.attitude[ROLL] = atti_buffer[ROLL]*180.0/PI;
+	mpu.attitude[PITCH] = atti_buffer[PITCH]*180.0/PI;
+	mpu.attitude[YAW] = atti_buffer[YAW]*180.0/PI;
+
+	mpu.angular_velocity[ROLL] = (float)mpu.raw_gyro[0]/mpu.scale_gyro;
+	mpu.angular_velocity[PITCH] = (float)mpu.raw_gyro[1]/mpu.scale_gyro;
+	mpu.angular_velocity[YAW] = (float)mpu.raw_gyro[2]/mpu.scale_gyro;
+
+	mpu.acceleration[ROLL] = (float) mpu.raw_accel[0]/mpu.scale_accel;
+	mpu.acceleration[PITCH] = (float) mpu.raw_accel[1]/mpu.scale_accel;
+	mpu.acceleration[YAW] = (float) mpu.raw_accel[2]/mpu.scale_accel;
+
+	//MPU6050_dmpGetAccel((float)accel[0]/scale_accel,(float)-accel[1]/scale_accel,(float)accel[2]/scale_accel,quat);
+}
+
 void DataCollection(void *p){
 
-	int16_t gyro[3];
-	int16_t accel[3];
-	int32_t quat[4];
 	float scale_gyro;
 	uint16_t scale_accel;
-	uint8_t more;
+
 	float atti_buffer[3];
-	int16_t sensors;
+
 	float bmp_temp, pressure, alt=0.0, c;
 	uint16_t i;
 	float second_derivate,alt_1,alt_2;
 
-	mpu_get_gyro_sens(&scale_gyro);
-	mpu_get_accel_sens(&scale_accel);
+	mpu_get_gyro_sens(&mpu.scale_gyro);
+	mpu_get_accel_sens(&mpu.scale_accel);
+
 	vSemaphoreCreateBinary(mpuSempahore);
 	xSemaphoreTake(mpuSempahore,0);
 	NVIC_EnableIRQ(EINT3_IRQn);
@@ -147,16 +169,15 @@ void DataCollection(void *p){
 		// Data input stage
 		//-----------------------------------------------------------------------
 
-		portENTER_CRITICAL();
-		dmp_read_fifo(gyro, accel, quat, NULL, &sensors, &more);
-		portEXIT_CRITICAL();
+		ReadAttiSensor();
 
-		MPU6050_dmpGetEuler(atti_buffer,quat);
+		quadrotor.sv.attitude[ROLL] = mpu.attitude[2] - atti_bias[ROLL];
+		quadrotor.sv.attitude[PITCH] = mpu.attitude[1] - atti_bias[PITCH];
+		quadrotor.sv.attitude[YAW] = mpu.attitude[0] - atti_bias[YAW];
 
-		atti_buffer[0] = atti_buffer[0]*180.0/PI;
-		atti_buffer[1] = atti_buffer[1]*180.0/PI;
-		atti_buffer[2] = atti_buffer[2]*180.0/PI;
-
+		quadrotor.sv.rate[ROLL] = mpu.angular_velocity[2];
+		quadrotor.sv.rate[PITCH] = mpu.angular_velocity[1];
+		quadrotor.sv.rate[YAW] = mpu.angular_velocity[0];
 
 #if USE_BAROMETER
 		//quadrotor.sv.temperature = BMP085_GetTemperature();
@@ -181,22 +202,7 @@ void DataCollection(void *p){
 				qPID_Init(&quadrotor.attiController[i]);
 			}
 			qPID_Init(&quadrotor.altitudeController);
-
 		}
-
-		quadrotor.sv.attitude[0] = atti_buffer[2] - atti_bias[ROLL];
-		quadrotor.sv.attitude[1] = -atti_buffer[1] - atti_bias[PITCH];
-		quadrotor.sv.attitude[2] = atti_buffer[0] - atti_bias[YAW];
-
-		quadrotor.sv.rate[ROLL] = (float)-gyro[0]/scale_gyro;
-		quadrotor.sv.rate[PITCH] = (float) gyro[1]/scale_gyro;
-		quadrotor.sv.rate[YAW] =  (float)-gyro[2]/scale_gyro;
-
-//		quadrotor.sv.accel[0] = (float) accel[0]/scale_accel;    // Xb
-//		quadrotor.sv.accel[1] = - (float)  accel[1]/scale_accel; // Yb
-//		quadrotor.sv.accel[2] = (float) accel[2]/scale_accel; 	 // Zb
-
-		MPU6050_dmpGetAccel((float)accel[0]/scale_accel,(float)-accel[1]/scale_accel,(float)accel[2]/scale_accel,quat);
 
 		if (quadrotor.mavlink_system.nav_mode == NAV_TAKEOFF){
 			if (current_alt_sp < quadrotor.sv.setpoint[ALTITUDE]){
