@@ -41,9 +41,9 @@ void Telemetry(void * p){
 										quadrotor.sv.attitude[0]*PI/180.0,
 										quadrotor.sv.attitude[1]*PI/180.0,
 										quadrotor.sv.attitude[2]*PI/180.0,
-										quadrotor.sv.accel[0],
-										quadrotor.sv.accel[1],
-										quadrotor.sv.accel[2]);
+										quadrotor.sv.rate[0],
+										quadrotor.sv.rate[1],
+										quadrotor.sv.rate[2]);
 
 /* Tricky HUD with joystick mapping
 		  mavlink_msg_attitude_pack(	quadrotor.mavlink_system.sysid,

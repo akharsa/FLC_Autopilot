@@ -101,7 +101,23 @@ typedef struct{
 
 IMU_t mpu;
 
+
+
 void ReadAttiSensor(){
+	/* Array index - Axis mapping: 0:X, 1:Y, 2:Z
+	 * 			 ^
+	 * 			 | +Y
+	 *    --------------
+	 *   |*	   			|
+	 *   |				|
+	 *   |		(*)		| --> +X
+	 *   |		+Z		|
+	 *   |				|
+	 *	  --------------
+	 */
+
+
+	// Reads attitude and inertial data from sensor, everything is in chip coordinates.
 	int16_t sensors;
 	uint8_t more;
 	uint8_t i;
@@ -116,23 +132,25 @@ void ReadAttiSensor(){
 	}
 	portEXIT_CRITICAL();
 
-	// Transform quaternion into roll, pitch, yaw euler angles
-	atti_buffer[ROLL] = atan2(2*mpu.quat[1]*mpu.quat[2] - 2*mpu.quat[0]*mpu.quat[3], 2*mpu.quat[0]*mpu.quat[0] + 2*mpu.quat[1]*mpu.quat[1] - 1);
-	atti_buffer[PITCH] = asin(2*mpu.quat[1]*mpu.quat[3] + 2*mpu.quat[0]*mpu.quat[2]);
-	atti_buffer[YAW] = atan2(2*mpu.quat[2]*mpu.quat[3] - 2*mpu.quat[0]*mpu.quat[1], 2*mpu.quat[0]*mpu.quat[0] + 2*mpu.quat[3]*mpu.quat[3] - 1);
+	// Transform quaternion into rotation on each axis XYZ of the chip
+	atti_buffer[2] = atan2(2*mpu.quat[1]*mpu.quat[2] - 2*mpu.quat[0]*mpu.quat[3], 2*mpu.quat[0]*mpu.quat[0] + 2*mpu.quat[1]*mpu.quat[1] - 1);
+	atti_buffer[1] = asin(2*mpu.quat[1]*mpu.quat[3] + 2*mpu.quat[0]*mpu.quat[2]);
+	atti_buffer[0] = atan2(2*mpu.quat[2]*mpu.quat[3] - 2*mpu.quat[0]*mpu.quat[1], 2*mpu.quat[0]*mpu.quat[0] + 2*mpu.quat[3]*mpu.quat[3] - 1);
 
 	// Rad to deg
-	mpu.attitude[ROLL] = atti_buffer[ROLL]*180.0/PI;
-	mpu.attitude[PITCH] = atti_buffer[PITCH]*180.0/PI;
-	mpu.attitude[YAW] = atti_buffer[YAW]*180.0/PI;
+	mpu.attitude[0] = -atti_buffer[0]*180.0/PI;
+	mpu.attitude[1] = atti_buffer[1]*180.0/PI;
+	mpu.attitude[2] = -atti_buffer[2]*180.0/PI;
 
-	mpu.angular_velocity[ROLL] = (float)mpu.raw_gyro[0]/mpu.scale_gyro;
-	mpu.angular_velocity[PITCH] = (float)mpu.raw_gyro[1]/mpu.scale_gyro;
-	mpu.angular_velocity[YAW] = (float)mpu.raw_gyro[2]/mpu.scale_gyro;
+	// Scaling
+	mpu.angular_velocity[0] = (float)mpu.raw_gyro[0]/mpu.scale_gyro; // X-axis of the chip
+	mpu.angular_velocity[1] = (float)mpu.raw_gyro[1]/mpu.scale_gyro; // Y-axis of the chip
+	mpu.angular_velocity[2] = (float)mpu.raw_gyro[2]/mpu.scale_gyro; // Z-axis of the chip
 
-	mpu.acceleration[ROLL] = (float) mpu.raw_accel[0]/mpu.scale_accel;
-	mpu.acceleration[PITCH] = (float) mpu.raw_accel[1]/mpu.scale_accel;
-	mpu.acceleration[YAW] = (float) mpu.raw_accel[2]/mpu.scale_accel;
+	// Scaling
+	mpu.acceleration[0] = (float) mpu.raw_accel[0]/mpu.scale_accel;
+	mpu.acceleration[1] = (float) mpu.raw_accel[1]/mpu.scale_accel;
+	mpu.acceleration[2] = (float) mpu.raw_accel[2]/mpu.scale_accel;
 
 	//MPU6050_dmpGetAccel((float)accel[0]/scale_accel,(float)-accel[1]/scale_accel,(float)accel[2]/scale_accel,quat);
 }
@@ -171,13 +189,19 @@ void DataCollection(void *p){
 
 		ReadAttiSensor();
 
-		quadrotor.sv.attitude[ROLL] = mpu.attitude[2] - atti_bias[ROLL];
-		quadrotor.sv.attitude[PITCH] = mpu.attitude[1] - atti_bias[PITCH];
-		quadrotor.sv.attitude[YAW] = mpu.attitude[0] - atti_bias[YAW];
+		// MPU to FLCv1 board and quadrotor mapping
+//		quadrotor.sv.attitude[ROLL] = mpu.attitude[2] - atti_bias[ROLL];
+//		quadrotor.sv.attitude[PITCH] = mpu.attitude[1] - atti_bias[PITCH];
+//		quadrotor.sv.attitude[YAW] = mpu.attitude[0] - atti_bias[YAW];
 
-		quadrotor.sv.rate[ROLL] = mpu.angular_velocity[2];
-		quadrotor.sv.rate[PITCH] = mpu.angular_velocity[1];
-		quadrotor.sv.rate[YAW] = mpu.angular_velocity[0];
+//		quadrotor.sv.rate[ROLL] = mpu.angular_velocity[0];
+//		quadrotor.sv.rate[PITCH] = mpu.angular_velocity[1];
+//		quadrotor.sv.rate[YAW] = mpu.angular_velocity[2];
+
+		quadrotor.sv.rate[ROLL] = mpu.acceleration[0];
+		quadrotor.sv.rate[PITCH] = mpu.acceleration[1];
+		quadrotor.sv.rate[YAW] = mpu.acceleration[2];
+
 
 #if USE_BAROMETER
 		//quadrotor.sv.temperature = BMP085_GetTemperature();
