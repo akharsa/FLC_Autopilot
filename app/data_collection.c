@@ -59,6 +59,37 @@ uint8_t MPU6050_dmpGetEuler(float *euler, int32_t q[]) {
 }
 
 
+uint8_t MPU6050_dmpGetAccel(float accel_0, float accel_1, float accel_2, int32_t q[]) {
+	float g[3];
+
+	float q1[4];
+	uint8_t i;
+
+	for(i = 0; i < 4; i++ ) {
+		q1[i] = ((float) (q[i]>>16)) / 16384.0f;
+	}
+
+	// Este vector esta bien armado como la gravedad.
+    g[0] = (2 * (q1[1]*q1[3] - q1[0]*q1[2]));
+    g[1]=  -(2 * (q1[0]*q1[1] + q1[2]*q1[3]));
+    g[2] = (q1[0]*q1[0] - q1[1]*q1[1] - q1[2]*q1[2] + q1[3]*q1[3]);
+
+//    quadrotor.sv.accel[ROLL] =  accel_0;
+//    quadrotor.sv.accel[PITCH] = accel_1;
+//    quadrotor.sv.accel[YAW] =   accel_2;
+
+    quadrotor.sv.accel[ROLL] =  accel_0 -  g[0];
+    quadrotor.sv.accel[PITCH] = accel_1 -  g[1];
+    quadrotor.sv.accel[YAW] =   accel_2 -  g[2];
+
+//    quadrotor.sv.accel[ROLL] = accelRaw0 - g[0];
+//    quadrotor.sv.accel[PITCH] = accelRaw1 - g[1];
+//    quadrotor.sv.accel[YAW] = accelRaw2 - g[2];
+
+
+    return 0;
+}
+
 float map(long x, long in_min, long in_max, float out_min, float out_max)
 {
   return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
@@ -153,7 +184,6 @@ void DataCollection(void *p){
 
 		}
 
-
 		quadrotor.sv.attitude[0] = atti_buffer[2] - atti_bias[ROLL];
 		quadrotor.sv.attitude[1] = -atti_buffer[1] - atti_bias[PITCH];
 		quadrotor.sv.attitude[2] = atti_buffer[0] - atti_bias[YAW];
@@ -162,13 +192,11 @@ void DataCollection(void *p){
 		quadrotor.sv.rate[PITCH] = (float) gyro[1]/scale_gyro;
 		quadrotor.sv.rate[YAW] =  (float)-gyro[2]/scale_gyro;
 
-		//quadrotor.sv.accel[ROLL] =  (float)-accel[0]/scale_accel; Tricky!!
-		quadrotor.sv.accel[PITCH] =  (float)accel[1]/scale_accel;
-		quadrotor.sv.accel[YAW] =  (float)-accel[2]/scale_accel;
+//		quadrotor.sv.accel[0] = (float) accel[0]/scale_accel;    // Xb
+//		quadrotor.sv.accel[1] = - (float)  accel[1]/scale_accel; // Yb
+//		quadrotor.sv.accel[2] = (float) accel[2]/scale_accel; 	 // Zb
 
-		// The axis correspond to the assigment on the qground control and the mapping of the mavlink_control functions.
-		//quadrotor.sv.setpoint[ALTITUDE] = 0.5;
-		//z_bias = map((quadrotor.mavlink_control.z < 100)?0:quadrotor.mavlink_control.z,0,1000,0.0,1.0);
+		MPU6050_dmpGetAccel((float)accel[0]/scale_accel,(float)-accel[1]/scale_accel,(float)accel[2]/scale_accel,quat);
 
 		if (quadrotor.mavlink_system.nav_mode == NAV_TAKEOFF){
 			if (current_alt_sp < quadrotor.sv.setpoint[ALTITUDE]){
@@ -204,6 +232,7 @@ void DataCollection(void *p){
 		if (prescaler-- == 0){
 			RangeFinder_getDistance();
 
+			// Outlayer filter
 			second_derivate = (quadrotor.sv.altitude-2*alt_1+alt_2)*40; //200/5 Hz
 			alt_2 = alt_1;
 			alt_1 = quadrotor.sv.altitude;
