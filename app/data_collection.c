@@ -160,8 +160,6 @@ void DataCollection(void *p){
 	float scale_gyro;
 	uint16_t scale_accel;
 
-	float atti_buffer[3];
-
 	float bmp_temp, pressure, alt=0.0, c;
 	uint16_t i;
 	float second_derivate,alt_1,alt_2;
@@ -189,20 +187,6 @@ void DataCollection(void *p){
 
 		ReadAttiSensor();
 
-		// MPU to FLCv1 board and quadrotor mapping
-//		quadrotor.sv.attitude[ROLL] = mpu.attitude[2] - atti_bias[ROLL];
-//		quadrotor.sv.attitude[PITCH] = mpu.attitude[1] - atti_bias[PITCH];
-//		quadrotor.sv.attitude[YAW] = mpu.attitude[0] - atti_bias[YAW];
-
-//		quadrotor.sv.rate[ROLL] = mpu.angular_velocity[0];
-//		quadrotor.sv.rate[PITCH] = mpu.angular_velocity[1];
-//		quadrotor.sv.rate[YAW] = mpu.angular_velocity[2];
-
-		quadrotor.sv.rate[ROLL] = mpu.acceleration[0];
-		quadrotor.sv.rate[PITCH] = mpu.acceleration[1];
-		quadrotor.sv.rate[YAW] = mpu.acceleration[2];
-
-
 #if USE_BAROMETER
 		//quadrotor.sv.temperature = BMP085_GetTemperature();
 		//quadrotor.sv.current_pressure = BMP085_GetPressure();
@@ -212,10 +196,9 @@ void DataCollection(void *p){
 		// --------------------- Biasing ---------------------
 
 		if ((quadrotor.mavlink_control.buttons & BTN_START) != 0){
-			atti_bias[ROLL] = atti_buffer[2];
-			atti_bias[PITCH] = -atti_buffer[1];
-			atti_bias[YAW] = atti_buffer[0];
-
+			atti_bias[ROLL] = -mpu.attitude[0];
+			atti_bias[PITCH] =  mpu.attitude[1];
+			atti_bias[YAW] = -mpu.attitude[2];
 
 			uint8_t i;
 			for (i=0;i<3;i++){
@@ -227,6 +210,15 @@ void DataCollection(void *p){
 			}
 			qPID_Init(&quadrotor.altitudeController);
 		}
+
+		// MPU to FLCv1 board and quadrotor mapping
+		quadrotor.sv.attitude[ROLL] = -mpu.attitude[0] - atti_bias[ROLL];
+		quadrotor.sv.attitude[PITCH] = mpu.attitude[1] - atti_bias[PITCH];
+		quadrotor.sv.attitude[YAW] = -mpu.attitude[2] - atti_bias[YAW];
+		quadrotor.sv.rate[ROLL] = -mpu.angular_velocity[0];
+		quadrotor.sv.rate[PITCH] = mpu.angular_velocity[1];
+		quadrotor.sv.rate[YAW] = -mpu.angular_velocity[2];
+
 
 		if (quadrotor.mavlink_system.nav_mode == NAV_TAKEOFF){
 			if (current_alt_sp < quadrotor.sv.setpoint[ALTITUDE]){
@@ -245,6 +237,9 @@ void DataCollection(void *p){
 		quadrotor.sv.setpoint[ROLL] = map(quadrotor.mavlink_control.y,-1000,1000,-40.0,40.0);
 		quadrotor.sv.setpoint[PITCH] = map(quadrotor.mavlink_control.x,-1000,1000,-40.0,40.0);
 		quadrotor.sv.setpoint[YAW] = map(quadrotor.mavlink_control.r,-1000,1000,-180.0,180.0);
+		if (quadrotor.mavlink_system.nav_mode == NAV_ATTI){
+			quadrotor.sv.setpoint[ALTITUDE] = map((quadrotor.mavlink_control.z < 100)?0:quadrotor.mavlink_control.z,0,1000,0.0,1.0);
+		}
 
 		//-----------------------------------------------------------------------
 		// Controller processing stage
@@ -271,8 +266,6 @@ void DataCollection(void *p){
 			}
 
 			prescaler = PRESCALER_VALUE;
-
-
 		}
 
 		//-----------------------------------------------------------------------
@@ -282,7 +275,7 @@ void DataCollection(void *p){
 		control[ROLL] = quadrotor.sv.rateCtrlOutput[ROLL];
 		control[PITCH] =  quadrotor.sv.rateCtrlOutput[PITCH];
 		control[YAW] = -quadrotor.sv.rateCtrlOutput[YAW]; //FIXME: there is a problem with the sign (maybe in the Mq)
-		control[ALTITUDE] = quadrotor.sv.altitudeCtrlOutput;
+		control[ALTITUDE] = quadrotor.sv.setpoint[ALTITUDE]; //quadrotor.sv.altitudeCtrlOutput;
 
 		quadrotor.sv.motorOutput[0] = (	control[ALTITUDE]*K_Z - control[ROLL]*K_PHI - control[PITCH]*K_THETA - control[YAW]*K_PSI	);
 		quadrotor.sv.motorOutput[1] = (	control[ALTITUDE]*K_Z - control[ROLL]*K_PHI + control[PITCH]*K_THETA + control[YAW]*K_PSI	);
