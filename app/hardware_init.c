@@ -209,15 +209,18 @@ void hardware_init(void * p){
 	qAnalog_InitPin(VOLTAGE_ANALOG);
 
 	//=========================================================================
+
 	quadrotor.mavlink_system.state = MAV_STATE_ACTIVE;
 	quadrotor.mavlink_system.mode |= MAV_MODE_FLAG_SAFETY_ARMED;
 	quadrotor.mode = ESC_STANDBY;
 	quadrotor.mavlink_system.nav_mode = NAV_ATTI;
 
+	MAVLink_parameters_setup();
+
 	//uint32_t stack_free = uxTaskGetStackHighWaterMark(NULL);
 	ret = xTaskCreate( DataCollection, "DATCOL", 500, NULL, tskIDLE_PRIORITY+3, NULL );
 	ret = xTaskCreate( Telemetry, "TLM", 300, NULL, tskIDLE_PRIORITY+1, NULL );
-	ret = xTaskCreate( Communications, "COMMS", 300, NULL, tskIDLE_PRIORITY+1, NULL );
+	ret = xTaskCreate( Communications, "COMMS", 300, NULL, tskIDLE_PRIORITY+2, NULL );
 	ret = xTaskCreate( beacon, "BEACON", 30, NULL, tskIDLE_PRIORITY+1, NULL); // STACK OK
 
 	vTaskDelete(NULL);

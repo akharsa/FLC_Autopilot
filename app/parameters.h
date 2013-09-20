@@ -47,10 +47,10 @@
 
 struct global_struct
 {
-	float param[ONBOARD_PARAM_COUNT];
+	float * param[ONBOARD_PARAM_COUNT];
 	char param_name[ONBOARD_PARAM_COUNT][MAVLINK_MSG_PARAM_SET_FIELD_PARAM_ID_LEN];
 };
 
 struct global_struct global_data;
-void global_data_reset_param_defaults(void);
+void MAVLink_parameters_setup(void);
 #endif /* PARAMETERS_H_ */

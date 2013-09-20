@@ -51,7 +51,7 @@ void ParameterSend(void * p){
 											quadrotor.mavlink_system.compid,
 											&msg,
 											(int8_t*) global_data.param_name[m_parameter_i],
-											global_data.param[m_parameter_i],
+											*(global_data.param[m_parameter_i]),
 											MAVLINK_TYPE_FLOAT,
 											ONBOARD_PARAM_COUNT,
 											m_parameter_i
@@ -108,23 +108,23 @@ void ParameterSet(mavlink_message_t * msg){
 				// Only write and emit changes if there is actually a difference
 				// AND only write if new value is NOT "not-a-number"
 				// AND is NOT infinity
-				if (global_data.param[i] != set.param_value
+				if (*(global_data.param[i]) != set.param_value
 						//&& !isnan(set.param_value)
 						//&& !isinf(set.param_value) && set.param_type == MAVLINK_TYPE_FLOAT)
 						)
 				{
-					global_data.param[i] = set.param_value;
-					vPortEnterCritical();
+					*(global_data.param[i]) = set.param_value;
+
 					mavlink_msg_param_value_pack( 	quadrotor.mavlink_system.sysid,
 							quadrotor.mavlink_system.compid,
 							&msg_out,
 							(int8_t*) global_data.param_name[i],
-							global_data.param[i],
+							*(global_data.param[i]),
 							MAVLINK_TYPE_FLOAT,
 							ONBOARD_PARAM_COUNT,
 							m_parameter_i
 					);
-					vPortExitCritical();
+
 					len = mavlink_msg_to_send_buffer(buf, &msg_out);
 					qUART_Send(UART_GROUNDCOMM,buf,len);
 
@@ -151,7 +151,6 @@ void Communications(void * pvParameters){
     qUART_Register_RBR_Callback(UART_GROUNDCOMM, UART_Rx_Handler);
     qUART_EnableRx(UART_GROUNDCOMM);
 
-    global_data_reset_param_defaults();
     xTaskCreate( ParameterSend, "PARAMS", 300, NULL, tskIDLE_PRIORITY+1,  &paramListHandle  );
 
 	for (;;){
@@ -208,13 +207,6 @@ void Communications(void * pvParameters){
 							quadrotor.mode = ESC_STANDBY;
 						}else{
 							quadrotor.mode = ESC_ARMED;
-							/*
-							quadrotor.sv.setpoint[ALTITUDE] = ((quadrotor.mavlink_control.x+1000.0)/2000.0)*500.0;
-							qESC_SetOutput(MOTOR1,quadrotor.sv.setpoint[ALTITUDE]);
-							qESC_SetOutput(MOTOR2,quadrotor.sv.setpoint[ALTITUDE]);
-							qESC_SetOutput(MOTOR3,quadrotor.sv.setpoint[ALTITUDE]);
-							qESC_SetOutput(MOTOR4,quadrotor.sv.setpoint[ALTITUDE]);
-							*/
 						}
 						break;
 					case MAVLINK_MSG_ID_PARAM_REQUEST_LIST:

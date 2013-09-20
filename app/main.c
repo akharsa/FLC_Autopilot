@@ -37,7 +37,7 @@ void AppMain(void){
 	quadrotor.mavlink_system.nav_mode = NAV_ATTI;
 
 	ret = xTaskCreate( hardware_init, "HW_INIT", 150, NULL, tskIDLE_PRIORITY+3, NULL ); //STACK OK,
-	ret = xTaskCreate( MAVLink_Heartbeat, "HEARTBEAT", 300, NULL, tskIDLE_PRIORITY+2, NULL ); //STACK OK
+	ret = xTaskCreate( MAVLink_Heartbeat, "HEARTBEAT", 300, NULL, tskIDLE_PRIORITY+1, NULL ); //STACK OK
 
 	vTaskStartScheduler();
 	while(1);
