@@ -19,7 +19,7 @@
 #include "mavlink_bridge.h"
 #include "qUART.h"
 
-#define PI 3.14159265359
+
 extern float current_alt_sp;
 
 void Telemetry(void * p){

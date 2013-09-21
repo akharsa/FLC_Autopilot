@@ -50,6 +50,8 @@ void TIMER3_IRQHandler(void)
 			}else{
 				distance = (capture/58.0)/100.0;
 				if (distance < 3.5){
+					// The sign is not importat cause cos(x) = cos(-x)
+					distance = distance*cos(quadrotor.sv.attitude[PITCH]*PI/180.0)*cos(quadrotor.sv.attitude[ROLL]*PI/180.0);
 					quadrotor.sv.altitude = c*distance + (1.0-c)*quadrotor.sv.altitude;
 				}
 			}

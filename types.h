@@ -33,7 +33,7 @@ typedef unsigned long size_t;
 typedef unsigned int size_t;
 #endif
 #endif
-
+#define PI 3.14159265359
 
 
 #endif /* TYPES_H_ */

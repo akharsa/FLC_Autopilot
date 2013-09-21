@@ -222,23 +222,42 @@ void DataCollection(void *p){
 
 		if (quadrotor.mavlink_system.nav_mode == NAV_TAKEOFF){
 			if (current_alt_sp < quadrotor.sv.setpoint[ALTITUDE]){
-				current_alt_sp  += quadrotor.sv.setpoint[ALTITUDE] / (200.0*5.0); // 2 seconds manouver in 200 steps
+				current_alt_sp  += quadrotor.sv.setpoint[ALTITUDE] / (200.0*5.0); // 5 seconds manouver in 200 steps
 			}else{
-				//quadrotor.mavlink_system.nav_mode == NAV_ALTHOLD;
+				quadrotor.mavlink_system.nav_mode = NAV_ALTHOLD;
 			}
 		}else if (quadrotor.mavlink_system.nav_mode == NAV_LANDING){
 			if (current_alt_sp > 0){
 				current_alt_sp  -= quadrotor.sv.setpoint[ALTITUDE] / (200.0*5.0); // 5 seconds manouver in 200 steps
 			}else{
-				//quadrotor.mavlink_system.nav_mode == NAV_ATTI;
+				quadrotor.mavlink_system.nav_mode = NAV_ALTHOLD;
 			}
 		}
 
 		quadrotor.sv.setpoint[ROLL] = map(quadrotor.mavlink_control.y,-1000,1000,-40.0,40.0);
 		quadrotor.sv.setpoint[PITCH] = map(quadrotor.mavlink_control.x,-1000,1000,-40.0,40.0);
 		quadrotor.sv.setpoint[YAW] = map(quadrotor.mavlink_control.r,-1000,1000,-180.0,180.0);
-		if (quadrotor.mavlink_system.nav_mode == NAV_ATTI){
-			quadrotor.sv.setpoint[ALTITUDE] = map((quadrotor.mavlink_control.z < 100)?0:quadrotor.mavlink_control.z,0,1000,0.0,1.0);
+
+//		if (quadrotor.mavlink_system.nav_mode == NAV_ATTI){
+//			quadrotor.sv.setpoint[ALTITUDE] = map((quadrotor.mavlink_control.z < 100)?0:quadrotor.mavlink_control.z,0,1000,0.0,1.0);
+//		}
+
+		if (quadrotor.mavlink_system.nav_mode == NAV_ALTHOLD){
+			// Dead zone
+			int16_t buffer;
+			if ( ( quadrotor.mavlink_control.z > -100 ) && ( quadrotor.mavlink_control.z < 100 )){
+				buffer = 0;
+			}else{
+				buffer = quadrotor.mavlink_control.z;
+			}
+
+			quadrotor.sv.setpoint[ALTITUDE] += map(buffer,-1000,1000,-0.005,0.005);
+			if ( quadrotor.sv.setpoint[ALTITUDE] < 0.0 ){
+				quadrotor.sv.setpoint[ALTITUDE] = 0.0;
+			}else if ( quadrotor.sv.setpoint[ALTITUDE] > 3.0 ){
+				quadrotor.sv.setpoint[ALTITUDE] = 3.0;
+			}
+			current_alt_sp = quadrotor.sv.setpoint[ALTITUDE]; // Esto esta feo, estaria bueno que sea solo el sp la variable a usar
 		}
 
 		//-----------------------------------------------------------------------
@@ -275,7 +294,8 @@ void DataCollection(void *p){
 		control[ROLL] = quadrotor.sv.rateCtrlOutput[ROLL];
 		control[PITCH] =  quadrotor.sv.rateCtrlOutput[PITCH];
 		control[YAW] = -quadrotor.sv.rateCtrlOutput[YAW]; //FIXME: there is a problem with the sign (maybe in the Mq)
-		control[ALTITUDE] = quadrotor.sv.setpoint[ALTITUDE]; //quadrotor.sv.altitudeCtrlOutput;
+		//control[ALTITUDE] = quadrotor.sv.setpoint[ALTITUDE];
+		control[ALTITUDE] = quadrotor.sv.altitudeCtrlOutput;
 
 		quadrotor.sv.motorOutput[0] = (	control[ALTITUDE]*K_Z - control[ROLL]*K_PHI - control[PITCH]*K_THETA - control[YAW]*K_PSI	);
 		quadrotor.sv.motorOutput[1] = (	control[ALTITUDE]*K_Z - control[ROLL]*K_PHI + control[PITCH]*K_THETA + control[YAW]*K_PSI	);
@@ -293,6 +313,8 @@ void DataCollection(void *p){
 			}else{
 				for (i=1;i<5;i++) qLed_TurnOff(leds[i]);
 			}
+			quadrotor.sv.setpoint[ALTITUDE] = 0.0;
+			current_alt_sp = 0.0;
 		}else{
 			// Motor command
 			qESC_SetOutput(MOTOR1,quadrotor.sv.motorOutput[0]);

@@ -27,7 +27,7 @@ typedef enum {NAV_ACRO,NAV_ATTI,NAV_TAKEOFF,NAV_LANDING, NAV_ALTHOLD} nav_mode_t
 
 typedef struct {
 	float rate[3];
-	float attitude[3];
+	float attitude[3]; // in deg
 	float setpoint[4];
 	float rateCtrlOutput[3];
 	float attiCtrlOutput[3];
