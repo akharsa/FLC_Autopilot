@@ -133,9 +133,11 @@ void ReadAttiSensor(){
 	portEXIT_CRITICAL();
 
 	// Transform quaternion into rotation on each axis XYZ of the chip
-	atti_buffer[2] = atan2(2*mpu.quat[1]*mpu.quat[2] - 2*mpu.quat[0]*mpu.quat[3], 2*mpu.quat[0]*mpu.quat[0] + 2*mpu.quat[1]*mpu.quat[1] - 1);
-	atti_buffer[1] = asin(2*mpu.quat[1]*mpu.quat[3] + 2*mpu.quat[0]*mpu.quat[2]);
+	// Quaternion is in W X Y Z form
+
 	atti_buffer[0] = atan2(2*mpu.quat[2]*mpu.quat[3] - 2*mpu.quat[0]*mpu.quat[1], 2*mpu.quat[0]*mpu.quat[0] + 2*mpu.quat[3]*mpu.quat[3] - 1);
+	atti_buffer[1] = asin(2*mpu.quat[1]*mpu.quat[3] + 2*mpu.quat[0]*mpu.quat[2]);
+	atti_buffer[2] = atan2(2*mpu.quat[1]*mpu.quat[2] - 2*mpu.quat[0]*mpu.quat[3], 2*mpu.quat[0]*mpu.quat[0] + 2*mpu.quat[1]*mpu.quat[1] - 1);
 
 	// Rad to deg
 	mpu.attitude[0] = -atti_buffer[0]*180.0/PI;
