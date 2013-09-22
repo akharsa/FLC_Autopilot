@@ -295,7 +295,14 @@ void DataCollection(void *p){
 
 		quadrotor.sv.setpoint[ROLL] = map(quadrotor.mavlink_control.y,-1000,1000,-40.0,40.0);
 		quadrotor.sv.setpoint[PITCH] = map(quadrotor.mavlink_control.x,-1000,1000,-40.0,40.0);
-		quadrotor.sv.setpoint[YAW] = map(quadrotor.mavlink_control.r,-1000,1000,-180.0,180.0);
+		//quadrotor.sv.setpoint[YAW] = map(quadrotor.mavlink_control.r,-1000,1000,-180.0,180.0);
+		if (((quadrotor.mavlink_control.buttons & BTN_LEFT1) != 0) && ((quadrotor.mavlink_control.buttons & BTN_RIGHT1) == 0)){
+			quadrotor.sv.setpoint[YAW] = -45.0;
+		}else if (((quadrotor.mavlink_control.buttons & BTN_LEFT1) == 0) && ((quadrotor.mavlink_control.buttons & BTN_RIGHT1) != 0)){
+			quadrotor.sv.setpoint[YAW] = 45.0;
+		}else{
+			quadrotor.sv.setpoint[YAW] = 0.0;
+		}
 
 //		if (quadrotor.mavlink_system.nav_mode == NAV_ATTI){
 //			quadrotor.sv.setpoint[ALTITUDE] = map((quadrotor.mavlink_control.z < 100)?0:quadrotor.mavlink_control.z,0,1000,0.0,1.0);
