@@ -213,7 +213,7 @@ void hardware_init(void * p){
 	quadrotor.mavlink_system.state = MAV_STATE_ACTIVE;
 	quadrotor.mavlink_system.mode |= MAV_MODE_FLAG_SAFETY_ARMED;
 	quadrotor.mode = ESC_STANDBY;
-	quadrotor.mavlink_system.nav_mode = NAV_ALTHOLD;
+	quadrotor.mavlink_system.nav_mode = NAV_ATTI;
 
 	MAVLink_parameters_setup();
 

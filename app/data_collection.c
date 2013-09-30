@@ -304,11 +304,9 @@ void DataCollection(void *p){
 			quadrotor.sv.setpoint[YAW] = 0.0;
 		}
 
-//		if (quadrotor.mavlink_system.nav_mode == NAV_ATTI){
-//			quadrotor.sv.setpoint[ALTITUDE] = map((quadrotor.mavlink_control.z < 100)?0:quadrotor.mavlink_control.z,0,1000,0.0,1.0);
-//		}
-
-		if (quadrotor.mavlink_system.nav_mode == NAV_ALTHOLD){
+		if (quadrotor.mavlink_system.nav_mode == NAV_ATTI){
+			quadrotor.sv.setpoint[ALTITUDE] = map((quadrotor.mavlink_control.z < 100)?0:quadrotor.mavlink_control.z,0,1000,0.0,1.0);
+		}else if (quadrotor.mavlink_system.nav_mode == NAV_ALTHOLD){
 			// Dead zone
 			int16_t buffer;
 			if ( ( quadrotor.mavlink_control.z > -100 ) && ( quadrotor.mavlink_control.z < 100 )){
@@ -346,8 +344,13 @@ void DataCollection(void *p){
 			second_derivate = (quadrotor.sv.altitude-2*alt_1+alt_2)*40; //200/5 Hz
 			alt_2 = alt_1;
 			alt_1 = quadrotor.sv.altitude;
-			if (fabs(second_derivate)<5.0){
-				quadrotor.sv.altitudeCtrlOutput = qPID_Procees(&quadrotor.altitudeController,current_alt_sp,quadrotor.sv.altitude);
+
+			if (quadrotor.mavlink_system.nav_mode == NAV_ATTI){
+				if (fabs(second_derivate)<5.0){
+					quadrotor.sv.altitudeCtrlOutput = qPID_Procees(&quadrotor.altitudeController,current_alt_sp,quadrotor.sv.altitude);
+				}
+			}else{
+				quadrotor.sv.altitudeCtrlOutput = quadrotor.sv.setpoint[ALTITUDE];
 			}
 
 			prescaler = PRESCALER_VALUE;
