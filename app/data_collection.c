@@ -36,7 +36,6 @@ xSemaphoreHandle mpuSempahore;
 uint8_t prescaler = PRESCALER_VALUE;
 float z_bias;
 
-#define PI 3.14159265359
 
 #define ATTI_THRESHOLD 3.0
 float atti_bias[3];
@@ -87,21 +86,39 @@ void EINT3_IRQHandler(void)
 
 float current_alt_sp = 0.0;
 
-typedef struct{
-	int16_t raw_gyro[3];		// Last raw measure of the gyros
-	int16_t raw_accel[3];		// Last raw measure of the accelerometers
-	float scale_gyro;			// Gyro scale in LSB/deg/sec
-	float scale_accel;			// Accel scale in LSB/g
-
-	float quat[4];				// Calculated quaternion
-	float angular_velocity[3];  // Scaled angular velocity in deg/sec
-	float acceleration[3];		// Scaled acceleration in m/sec
-	float attitude[3]; 			// Euler angles in roll, pitch, yaw format in deg
-}IMU_t;
+#ifndef fmodf
+inline float fmodf(float value1, float value2) { return (float)(fmod(value1,value2)); }
+#endif
 
 IMU_t mpu;
 
 
+float a,b,c,d;
+float aSq,bSq,cSq,dSq;
+float dcm[3][3];
+
+float limitAngleToPMPIf(float angle)
+{
+    if (angle > -20*M_PI && angle < 20*M_PI)
+    {
+        while (angle > ((float)M_PI+FLT_EPSILON))
+        {
+            angle -= 2.0f * (float)M_PI;
+        }
+
+        while (angle <= -((float)M_PI+FLT_EPSILON))
+        {
+            angle += 2.0f * (float)M_PI;
+        }
+    }
+    else
+    {
+        // Approximate
+        angle = fmodf(angle, (float)M_PI);
+    }
+
+    return angle;
+}
 
 void ReadAttiSensor(){
 	/* Array index - Axis mapping: 0:X, 1:Y, 2:Z
@@ -133,14 +150,56 @@ void ReadAttiSensor(){
 	portEXIT_CRITICAL();
 
 	// Transform quaternion into rotation on each axis XYZ of the chip
-	atti_buffer[2] = atan2(2*mpu.quat[1]*mpu.quat[2] - 2*mpu.quat[0]*mpu.quat[3], 2*mpu.quat[0]*mpu.quat[0] + 2*mpu.quat[1]*mpu.quat[1] - 1);
-	atti_buffer[1] = asin(2*mpu.quat[1]*mpu.quat[3] + 2*mpu.quat[0]*mpu.quat[2]);
+	// Quaternion is in W X Y Z form
+/*
 	atti_buffer[0] = atan2(2*mpu.quat[2]*mpu.quat[3] - 2*mpu.quat[0]*mpu.quat[1], 2*mpu.quat[0]*mpu.quat[0] + 2*mpu.quat[3]*mpu.quat[3] - 1);
+	atti_buffer[1] = asin(2*mpu.quat[1]*mpu.quat[3] + 2*mpu.quat[0]*mpu.quat[2]);
+	atti_buffer[2] = atan2(2*mpu.quat[1]*mpu.quat[2] - 2*mpu.quat[0]*mpu.quat[3], 2*mpu.quat[0]*mpu.quat[0] + 2*mpu.quat[1]*mpu.quat[1] - 1);
+*/
+
+	a = mpu.quat[0];
+	b = mpu.quat[1];
+	c = mpu.quat[2];
+	d = mpu.quat[3];
+
+	aSq = a * a;
+	bSq = b * b;
+	cSq = c * c;
+	dSq = d * d;
+
+	dcm[0][0] = aSq + bSq - cSq - dSq;
+	dcm[0][1] = 2.0 * (b * c - a * d);
+	dcm[0][2] = 2.0 * (a * c + b * d);
+	dcm[1][0] = 2.0 * (b * c + a * d);
+	dcm[1][1] = aSq - bSq + cSq - dSq;
+	dcm[1][2] = 2.0 * (c * d - a * b);
+	dcm[2][0] = 2.0 * (b * d - a * c);
+	dcm[2][1] = 2.0 * (a * b + c * d);
+	dcm[2][2] = aSq - bSq - cSq + dSq;
+
+	//float phi, theta, psi;
+
+	atti_buffer[1] = asin(-dcm[2][0]);
+
+	if (fabs(atti_buffer[1] - M_PI_2) < 1.0e-3f) {
+		atti_buffer[0] = 0.0f;
+		atti_buffer[2] = (atan2(dcm[1][2] - dcm[0][1],
+				dcm[0][2] + dcm[1][1]) + atti_buffer[0]);
+
+	} else if (fabs(atti_buffer[1] + M_PI_2) < 1.0e-3f) {
+		atti_buffer[0] = 0.0f;
+		atti_buffer[2] = atan2(dcm[1][2] - dcm[0][1],
+				  dcm[0][2] + dcm[1][1] - atti_buffer[0]);
+
+	} else {
+		atti_buffer[0] = atan2(dcm[2][1], dcm[2][2]);
+		atti_buffer[2] = atan2(dcm[1][0], dcm[0][0]);
+	}
 
 	// Rad to deg
-	mpu.attitude[0] = -atti_buffer[0]*180.0/PI;
-	mpu.attitude[1] = atti_buffer[1]*180.0/PI;
-	mpu.attitude[2] = -atti_buffer[2]*180.0/PI;
+	mpu.attitude[0] = limitAngleToPMPIf(atti_buffer[0])*180.0/PI;
+	mpu.attitude[1] = limitAngleToPMPIf(atti_buffer[1])*180.0/PI;
+	mpu.attitude[2] = limitAngleToPMPIf(atti_buffer[2])*180.0/PI;
 
 	// Scaling
 	mpu.angular_velocity[0] = (float)mpu.raw_gyro[0]/mpu.scale_gyro; // X-axis of the chip
@@ -222,23 +281,49 @@ void DataCollection(void *p){
 
 		if (quadrotor.mavlink_system.nav_mode == NAV_TAKEOFF){
 			if (current_alt_sp < quadrotor.sv.setpoint[ALTITUDE]){
-				current_alt_sp  += quadrotor.sv.setpoint[ALTITUDE] / (200.0*5.0); // 2 seconds manouver in 200 steps
+				current_alt_sp  += quadrotor.sv.setpoint[ALTITUDE] / (200.0*5.0); // 5 seconds manouver in 200 steps
 			}else{
-				//quadrotor.mavlink_system.nav_mode == NAV_ALTHOLD;
+				quadrotor.mavlink_system.nav_mode = NAV_ALTHOLD;
 			}
 		}else if (quadrotor.mavlink_system.nav_mode == NAV_LANDING){
 			if (current_alt_sp > 0){
 				current_alt_sp  -= quadrotor.sv.setpoint[ALTITUDE] / (200.0*5.0); // 5 seconds manouver in 200 steps
 			}else{
-				//quadrotor.mavlink_system.nav_mode == NAV_ATTI;
+				quadrotor.mavlink_system.nav_mode = NAV_ALTHOLD;
 			}
 		}
 
 		quadrotor.sv.setpoint[ROLL] = map(quadrotor.mavlink_control.y,-1000,1000,-40.0,40.0);
 		quadrotor.sv.setpoint[PITCH] = map(quadrotor.mavlink_control.x,-1000,1000,-40.0,40.0);
-		quadrotor.sv.setpoint[YAW] = map(quadrotor.mavlink_control.r,-1000,1000,-180.0,180.0);
-		if (quadrotor.mavlink_system.nav_mode == NAV_ATTI){
-			quadrotor.sv.setpoint[ALTITUDE] = map((quadrotor.mavlink_control.z < 100)?0:quadrotor.mavlink_control.z,0,1000,0.0,1.0);
+		//quadrotor.sv.setpoint[YAW] = map(quadrotor.mavlink_control.r,-1000,1000,-180.0,180.0);
+		if (((quadrotor.mavlink_control.buttons & BTN_LEFT1) != 0) && ((quadrotor.mavlink_control.buttons & BTN_RIGHT1) == 0)){
+			quadrotor.sv.setpoint[YAW] = -45.0;
+		}else if (((quadrotor.mavlink_control.buttons & BTN_LEFT1) == 0) && ((quadrotor.mavlink_control.buttons & BTN_RIGHT1) != 0)){
+			quadrotor.sv.setpoint[YAW] = 45.0;
+		}else{
+			quadrotor.sv.setpoint[YAW] = 0.0;
+		}
+
+//		if (quadrotor.mavlink_system.nav_mode == NAV_ATTI){
+//			quadrotor.sv.setpoint[ALTITUDE] = map((quadrotor.mavlink_control.z < 100)?0:quadrotor.mavlink_control.z,0,1000,0.0,1.0);
+//		}
+
+		if (quadrotor.mavlink_system.nav_mode == NAV_ALTHOLD){
+			// Dead zone
+			int16_t buffer;
+			if ( ( quadrotor.mavlink_control.z > -100 ) && ( quadrotor.mavlink_control.z < 100 )){
+				buffer = 0;
+			}else{
+				buffer = quadrotor.mavlink_control.z;
+			}
+
+			quadrotor.sv.setpoint[ALTITUDE] += map(buffer,-1000,1000,-0.005,0.005);
+			if ( quadrotor.sv.setpoint[ALTITUDE] < 0.0 ){
+				quadrotor.sv.setpoint[ALTITUDE] = 0.0;
+			}else if ( quadrotor.sv.setpoint[ALTITUDE] > 3.0 ){
+				quadrotor.sv.setpoint[ALTITUDE] = 3.0;
+			}
+			current_alt_sp = quadrotor.sv.setpoint[ALTITUDE]; // Esto esta feo, estaria bueno que sea solo el sp la variable a usar
 		}
 
 		//-----------------------------------------------------------------------
@@ -275,7 +360,8 @@ void DataCollection(void *p){
 		control[ROLL] = quadrotor.sv.rateCtrlOutput[ROLL];
 		control[PITCH] =  quadrotor.sv.rateCtrlOutput[PITCH];
 		control[YAW] = -quadrotor.sv.rateCtrlOutput[YAW]; //FIXME: there is a problem with the sign (maybe in the Mq)
-		control[ALTITUDE] = quadrotor.sv.setpoint[ALTITUDE]; //quadrotor.sv.altitudeCtrlOutput;
+		//control[ALTITUDE] = quadrotor.sv.setpoint[ALTITUDE];
+		control[ALTITUDE] = quadrotor.sv.altitudeCtrlOutput;
 
 		quadrotor.sv.motorOutput[0] = (	control[ALTITUDE]*K_Z - control[ROLL]*K_PHI - control[PITCH]*K_THETA - control[YAW]*K_PSI	);
 		quadrotor.sv.motorOutput[1] = (	control[ALTITUDE]*K_Z - control[ROLL]*K_PHI + control[PITCH]*K_THETA + control[YAW]*K_PSI	);
@@ -293,6 +379,8 @@ void DataCollection(void *p){
 			}else{
 				for (i=1;i<5;i++) qLed_TurnOff(leds[i]);
 			}
+			quadrotor.sv.setpoint[ALTITUDE] = 0.0;
+			current_alt_sp = 0.0;
 		}else{
 			// Motor command
 			qESC_SetOutput(MOTOR1,quadrotor.sv.motorOutput[0]);

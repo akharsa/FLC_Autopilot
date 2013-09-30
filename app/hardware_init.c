@@ -201,8 +201,8 @@ void hardware_init(void * p){
 	// --------------------------------------------------------
 	quadrotor.altitudeController.K = 0.85;
 	quadrotor.altitudeController.Ti = 1/1.4;
-	quadrotor.altitudeController.Td = 0.2;
-	quadrotor.altitudeController.Nd = 8;
+	quadrotor.altitudeController.Td = 0.3;
+	quadrotor.altitudeController.Nd = 10;
 
 	qAnalog_Init();
 	qAnalog_InitPin(TEMPERATURE_ANALOG);
@@ -213,7 +213,7 @@ void hardware_init(void * p){
 	quadrotor.mavlink_system.state = MAV_STATE_ACTIVE;
 	quadrotor.mavlink_system.mode |= MAV_MODE_FLAG_SAFETY_ARMED;
 	quadrotor.mode = ESC_STANDBY;
-	quadrotor.mavlink_system.nav_mode = NAV_ATTI;
+	quadrotor.mavlink_system.nav_mode = NAV_ALTHOLD;
 
 	MAVLink_parameters_setup();
 

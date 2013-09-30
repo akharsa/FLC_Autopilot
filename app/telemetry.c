@@ -19,8 +19,9 @@
 #include "mavlink_bridge.h"
 #include "qUART.h"
 
-#define PI 3.14159265359
+
 extern float current_alt_sp;
+extern IMU_t mpu;
 
 void Telemetry(void * p){
 	mavlink_message_t msg;
@@ -34,6 +35,19 @@ void Telemetry(void * p){
 	while(1){
 		if (qUARTStatus[UART_GROUNDCOMM]==DEVICE_READY){
 
+			/* Tricky HUD with joystick mapping
+  	  	  	mavlink_msg_attitude_pack(	quadrotor.mavlink_system.sysid,
+								  quadrotor.mavlink_system.compid,
+								  &msg,
+								  xTaskGetTickCount()/portTICK_RATE_MS,
+								  quadrotor.sv.setpoint[ROLL]*PI/180.0,
+								  quadrotor.sv.setpoint[PITCH]*PI/180.0,
+								  quadrotor.sv.setpoint[YAW]*PI/180.0,
+								  quadrotor.sv.rate[0],
+								  quadrotor.sv.rate[1],
+								  quadrotor.sv.rate[2]);
+			 */
+
 			mavlink_msg_attitude_pack(	quadrotor.mavlink_system.sysid,
 										quadrotor.mavlink_system.compid,
 										&msg,
@@ -45,18 +59,7 @@ void Telemetry(void * p){
 										quadrotor.sv.rate[1],
 										quadrotor.sv.rate[2]);
 
-/* Tricky HUD with joystick mapping
-		  mavlink_msg_attitude_pack(	quadrotor.mavlink_system.sysid,
-										  quadrotor.mavlink_system.compid,
-										  &msg,
-										  xTaskGetTickCount()/portTICK_RATE_MS,
-										  quadrotor.sv.setpoint[ROLL]*PI/180.0,
-										  quadrotor.sv.setpoint[PITCH]*PI/180.0,
-										  quadrotor.sv.setpoint[YAW]*PI/180.0,
-										  quadrotor.sv.rate[0],
-										  quadrotor.sv.rate[1],
-										  quadrotor.sv.rate[2]);
-*/
+
 			len = mavlink_msg_to_send_buffer(buf, &msg);
 			qUART_Send(UART_GROUNDCOMM,buf,len);
 
@@ -71,10 +74,27 @@ void Telemetry(void * p){
 									current_alt_sp  //TODO: Change to ascent rate
 									);
 
-			uint16_t len = mavlink_msg_to_send_buffer(buf, &msg);
+			len = mavlink_msg_to_send_buffer(buf, &msg);
 			qUART_Send(UART_GROUNDCOMM,buf,len);
 
+/*
+			mavlink_msg_attitude_quaternion_pack(
+									quadrotor.mavlink_system.sysid,
+									quadrotor.mavlink_system.compid,
+									&msg,
+									xTaskGetTickCount()/portTICK_RATE_MS,
+									mpu.quat[0],
+									mpu.quat[1],
+									mpu.quat[2],
+									mpu.quat[3],
+									quadrotor.sv.rate[0],
+									quadrotor.sv.rate[1],
+									quadrotor.sv.rate[2]
+									);
 
+			len = mavlink_msg_to_send_buffer(buf, &msg);
+			qUART_Send(UART_GROUNDCOMM,buf,len);
+*/
 #if USE_BAROMETER
 			mavlink_msg_scaled_pressure_pack(quadrotor.mavlink_system.sysid,
 											quadrotor.mavlink_system.compid,

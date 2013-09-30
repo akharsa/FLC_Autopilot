@@ -33,7 +33,20 @@ typedef unsigned long size_t;
 typedef unsigned int size_t;
 #endif
 #endif
+#define PI 3.14159265359
+#define M_PI 3.14159265358979323846
+#define FLT_EPSILON 1.19209290E-07F
 
+typedef struct{
+	int16_t raw_gyro[3];		// Last raw measure of the gyros
+	int16_t raw_accel[3];		// Last raw measure of the accelerometers
+	float scale_gyro;			// Gyro scale in LSB/deg/sec
+	float scale_accel;			// Accel scale in LSB/g
 
+	float quat[4];				// Calculated quaternion
+	float angular_velocity[3];  // Scaled angular velocity in deg/sec
+	float acceleration[3];		// Scaled acceleration in m/sec
+	float attitude[3]; 			// Euler angles in roll, pitch, yaw format in deg
+}IMU_t;
 
 #endif /* TYPES_H_ */
