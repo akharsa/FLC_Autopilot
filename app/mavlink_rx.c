@@ -23,7 +23,7 @@
 #include "parameters.h"
 #include "eeprom.h"
 #include "qESC.h"
-
+#include "qWDT.h"
 
 static int packet_drops = 0;
 mavlink_message_t msg;
@@ -34,6 +34,8 @@ xTaskHandle paramListHandle;
 
 uint8_t rx_led = 0;
 uint16_t m_parameter_i = ONBOARD_PARAM_COUNT; //esto es para que no mande al principio, solo en request
+
+uint32_t timeout = 0;
 
 void UART_Rx_Handler(uint8_t * buff, size_t sz);
 
@@ -156,6 +158,7 @@ void Communications(void * pvParameters){
 
 	for (;;){
 		if (pdTRUE == xSemaphoreTake(DataSmphr,1500/portTICK_RATE_MS)){
+			qWDT_Feed();
 			switch(msg.msgid){
 				case MAVLINK_MSG_ID_HEARTBEAT:
 					if (rx_led==0){
@@ -205,9 +208,16 @@ void Communications(void * pvParameters){
 					case MAVLINK_MSG_ID_MANUAL_CONTROL:
 						mavlink_msg_manual_control_decode(&msg,&quadrotor.mavlink_control);
 						if ((quadrotor.mavlink_control.buttons & 256)==0){
-							quadrotor.mode = ESC_STANDBY;
+							if (quadrotor.mode!=ESC_STANDBY){
+								qWDT_Stop();
+								quadrotor.mode = ESC_STANDBY;
+							}
+
 						}else{
-							quadrotor.mode = ESC_ARMED;
+							if (quadrotor.mode != ESC_ARMED){
+								qWDT_Start(2000000); //2 seg WDT with reset
+								quadrotor.mode = ESC_ARMED;
+							}
 							/*
 							quadrotor.sv.setpoint[ALTITUDE] = ((quadrotor.mavlink_control.x+1000.0)/2000.0)*500.0;
 							qESC_SetOutput(MOTOR1,quadrotor.sv.setpoint[ALTITUDE]);
@@ -233,6 +243,7 @@ void Communications(void * pvParameters){
 
 		}else{
 			// Timeout to get a new joystick commands, values to 0
+			timeout++;
 			quadrotor.mode = ESC_STANDBY;
 			qESC_SetOutput(MOTOR1,0);
 			qESC_SetOutput(MOTOR2,0);

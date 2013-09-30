@@ -20,14 +20,11 @@ qWDT_ResetSource qWDT_GetResetSource(){
 }
 
 void qWDT_Start(uint32_t timeout){
-	NVIC_EnableIRQ(WDT_IRQn);
-
+	//NVIC_EnableIRQ(WDT_IRQn);
 	// Initialize WDT, IRC OSC, interrupt mode, timeout = 5000000us = 5s
-	WDT_Init(WDT_CLKSRC_IRC, WDT_MODE_INT_ONLY);
+	WDT_Init(WDT_CLKSRC_IRC, WDT_MODE_RESET);
 	// Start watchdog with timeout given
 	WDT_Start(timeout);
-
-
 }
 
 void qWDT_Stop(){

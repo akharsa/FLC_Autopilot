@@ -22,12 +22,19 @@
 #include "qUART.h"
 
 #include "math.h"
+#include "qWDT.h"
 
 #include "tasks.h"
 
 void Communications(void *);
 void AppMain(void){
 	portBASE_TYPE ret;
+
+	if (qWDT_GetResetSource()==RESET_EXTERNAL){
+		//First boot
+	}else{
+		//Watchdog Boot
+	}
 
 	quadrotor.mavlink_system.sysid = 20;
 	quadrotor.mavlink_system.compid = 01;
