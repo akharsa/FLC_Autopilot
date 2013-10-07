@@ -66,12 +66,12 @@ void Telemetry(void * p){
 			mavlink_msg_vfr_hud_pack(quadrotor.mavlink_system.sysid,
 									quadrotor.mavlink_system.compid,
 									&msg,
-									current_alt_sp, // Airspeed
-									current_alt_sp, // Groundspeed
+									quadrotor.sv.setpoint[ALTITUDE], // Airspeed
+									quadrotor.sv.setpoint[ALTITUDE], // Groundspeed
 									250, //TODO: Change to realheading
 									quadrotor.sv.altitudeCtrlOutput*100,
 									quadrotor.sv.altitude,
-									current_alt_sp  //TODO: Change to ascent rate
+									quadrotor.sv.setpoint[ALTITUDE]  //TODO: Change to ascent rate
 									);
 
 			len = mavlink_msg_to_send_buffer(buf, &msg);

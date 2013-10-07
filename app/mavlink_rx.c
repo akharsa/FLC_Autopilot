@@ -28,6 +28,7 @@
 static int packet_drops = 0;
 mavlink_message_t msg;
 mavlink_status_t status;
+mavlink_set_mode_t mode;
 
 xSemaphoreHandle DataSmphr;
 xTaskHandle paramListHandle;
@@ -38,7 +39,6 @@ uint16_t m_parameter_i = ONBOARD_PARAM_COUNT; //esto es para que no mande al pri
 uint32_t timeout = 0;
 
 void UART_Rx_Handler(uint8_t * buff, size_t sz);
-
 
 void ParameterSend(void * p){
 
@@ -172,82 +172,91 @@ void Communications(void * pvParameters){
 				case MAVLINK_MSG_ID_COMMAND_LONG:
 
 					switch (mavlink_msg_command_long_get_command(&msg)){
-					case MAV_CMD_NAV_TAKEOFF:
-						quadrotor.mavlink_system.nav_mode = NAV_TAKEOFF;
-						quadrotor.sv.setpoint[ALTITUDE] = 0.7;
-						break;
-					case MAV_CMD_NAV_LAND:
-						quadrotor.mavlink_system.nav_mode = NAV_LANDING;
-						quadrotor.sv.setpoint[ALTITUDE] = 0.7;
-						break;
-					case MAV_CMD_COMPONENT_ARM_DISARM:
-						if (mavlink_msg_command_long_get_param1(&msg)==1){
-						}else{
-						}
-						break;
-					case MAV_CMD_PREFLIGHT_STORAGE:
-						if (mavlink_msg_command_long_get_param1(&msg)==1){
-							// Write parameters from flash
-							vPortEnterCritical();
-							eeprom_write(EEPROM_ADDRESS,&global_data.param[0],0x0000,sizeof(global_data.param));
-							vPortExitCritical();
-						}else{
-							// Read parameters from flash
-							vPortEnterCritical();
-							eeprom_read(EEPROM_ADDRESS,&global_data.param[0],0x0000,sizeof(global_data.param));
-							vPortExitCritical();
-						}
-						break;
-					default:
-						break;
-					}
-
-					// EXECUTE ACTION
-					break;
-					case MAVLINK_MSG_ID_MANUAL_CONTROL:
-						mavlink_msg_manual_control_decode(&msg,&quadrotor.mavlink_control);
-						if ((quadrotor.mavlink_control.buttons & 256)==0){
-							if (quadrotor.mode!=ESC_STANDBY){
-								qWDT_Stop();
-								quadrotor.mode = ESC_STANDBY;
+						case MAV_CMD_NAV_TAKEOFF:
+							//quadrotor.mavlink_system.nav_mode = NAV_TAKEOFF;
+							//quadrotor.sv.setpoint[ALTITUDE] = 0.7;
+							if (quadrotor.mavlink_system.nav_mode == NAV_ACRO){
+								quadrotor.mavlink_system.nav_mode = NAV_ATTI;
+								break;
 							}
-
-						}else{
-							if (quadrotor.mode != ESC_ARMED){
-								qWDT_Start(2000000); //2 seg WDT with reset
-								quadrotor.mode = ESC_ARMED;
+							if (quadrotor.mavlink_system.nav_mode == NAV_ATTI){
+								quadrotor.mavlink_system.nav_mode = NAV_ALTHOLD;
+								break;
 							}
+							if (quadrotor.mavlink_system.nav_mode == NAV_ALTHOLD){
+								quadrotor.mavlink_system.nav_mode = NAV_ACRO;
+								break;
+							}
+							break;
+						case MAV_CMD_NAV_LAND:
+							//quadrotor.mavlink_system.nav_mode = NAV_LANDING;
+							//quadrotor.sv.setpoint[ALTITUDE] = 0.7;
+							break;
+						case MAV_CMD_COMPONENT_ARM_DISARM:
 							/*
-							quadrotor.sv.setpoint[ALTITUDE] = ((quadrotor.mavlink_control.x+1000.0)/2000.0)*500.0;
-							qESC_SetOutput(MOTOR1,quadrotor.sv.setpoint[ALTITUDE]);
-							qESC_SetOutput(MOTOR2,quadrotor.sv.setpoint[ALTITUDE]);
-							qESC_SetOutput(MOTOR3,quadrotor.sv.setpoint[ALTITUDE]);
-							qESC_SetOutput(MOTOR4,quadrotor.sv.setpoint[ALTITUDE]);
+							if (mavlink_msg_command_long_get_param1(&msg)==1){
+								quadrotor.mavlink_system.mode |= MAV_MODE_FLAG_SAFETY_ARMED;
+							}else{
+								quadrotor.mavlink_system.mode &= ~MAV_MODE_FLAG_SAFETY_ARMED;
+							}
 							*/
-						}
-						break;
-					case MAVLINK_MSG_ID_PARAM_REQUEST_LIST:
-						m_parameter_i = 0;
-						vTaskResume(paramListHandle);
-						break;
+							break;
+						case MAV_CMD_PREFLIGHT_STORAGE:
+							if (mavlink_msg_command_long_get_param1(&msg)==1){
+								// Write parameters from flash
+								vPortEnterCritical();
+								eeprom_write(EEPROM_ADDRESS,&global_data.param[0],0x0000,sizeof(global_data.param));
+								vPortExitCritical();
+							}else{
+								// Read parameters from flash
+								vPortEnterCritical();
+								eeprom_read(EEPROM_ADDRESS,&global_data.param[0],0x0000,sizeof(global_data.param));
+								vPortExitCritical();
+							}
+							break;
+						default:
+							break;
+					}
+					break;
 
-					case MAVLINK_MSG_ID_PARAM_SET:
-						ParameterSet(&msg);
-						break;
+				case MAVLINK_MSG_ID_MANUAL_CONTROL:
+					mavlink_msg_manual_control_decode(&msg,&quadrotor.mavlink_control);
+					if ((quadrotor.mavlink_control.buttons & BTN_LEFT2)==0){
+						quadrotor.mavlink_system.mode &= ~ MAV_MODE_FLAG_SAFETY_ARMED;
+					}else{
+						qWDT_Start(3000000); //only usefull for the first time, other times it is useless
+					}
+					break;
+				case MAVLINK_MSG_ID_PARAM_REQUEST_LIST:
+					m_parameter_i = 0;
+					vTaskResume(paramListHandle);
+					break;
 
-					default:
-						//Do nothing
-						break;
+				case MAVLINK_MSG_ID_PARAM_SET:
+					ParameterSet(&msg);
+					break;
+
+				case MAVLINK_MSG_ID_SET_MODE:
+					mavlink_msg_set_mode_decode(&msg,&mode);
+					if ((quadrotor.mavlink_control.buttons & BTN_LEFT2)==0){
+						quadrotor.mavlink_system.mode |= MAV_MODE_FLAG_SAFETY_ARMED;
+					}
+					break;
+
+				default:
+					//Do nothing
+					break;
 			}
 
 		}else{
 			// Timeout to get a new joystick commands, values to 0
 			timeout++;
-			quadrotor.mode = ESC_STANDBY;
+			//quadrotor.mode = ESC_STANDBY;
 			qESC_SetOutput(MOTOR1,0);
 			qESC_SetOutput(MOTOR2,0);
 			qESC_SetOutput(MOTOR3,0);
 			qESC_SetOutput(MOTOR4,0);
+			quadrotor.mavlink_system.mode &= ~MAV_MODE_FLAG_SAFETY_ARMED;
 		}
 	}
 }

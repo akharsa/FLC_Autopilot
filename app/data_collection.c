@@ -84,7 +84,6 @@ void EINT3_IRQHandler(void)
 	portEND_SWITCHING_ISR( xHigherPriorityTaskWoken );
 }
 
-float current_alt_sp = 0.0;
 
 #ifndef fmodf
 inline float fmodf(float value1, float value2) { return (float)(fmod(value1,value2)); }
@@ -278,7 +277,8 @@ void DataCollection(void *p){
 		quadrotor.sv.rate[PITCH] = mpu.angular_velocity[1];
 		quadrotor.sv.rate[YAW] = -mpu.angular_velocity[2];
 
-
+/*
+ * 	Remove this ugly thing
 		if (quadrotor.mavlink_system.nav_mode == NAV_TAKEOFF){
 			if (current_alt_sp < quadrotor.sv.setpoint[ALTITUDE]){
 				current_alt_sp  += quadrotor.sv.setpoint[ALTITUDE] / (200.0*5.0); // 5 seconds manouver in 200 steps
@@ -292,9 +292,10 @@ void DataCollection(void *p){
 				quadrotor.mavlink_system.nav_mode = NAV_ALTHOLD;
 			}
 		}
-
+*/
 		quadrotor.sv.setpoint[ROLL] = map(quadrotor.mavlink_control.y,-1000,1000,-40.0,40.0);
 		quadrotor.sv.setpoint[PITCH] = map(quadrotor.mavlink_control.x,-1000,1000,-40.0,40.0);
+
 		//quadrotor.sv.setpoint[YAW] = map(quadrotor.mavlink_control.r,-1000,1000,-180.0,180.0);
 		if (((quadrotor.mavlink_control.buttons & BTN_LEFT1) != 0) && ((quadrotor.mavlink_control.buttons & BTN_RIGHT1) == 0)){
 			quadrotor.sv.setpoint[YAW] = -45.0;
@@ -304,9 +305,13 @@ void DataCollection(void *p){
 			quadrotor.sv.setpoint[YAW] = 0.0;
 		}
 
+
 		if (quadrotor.mavlink_system.nav_mode == NAV_ATTI){
+
 			quadrotor.sv.setpoint[ALTITUDE] = map((quadrotor.mavlink_control.z < 100)?0:quadrotor.mavlink_control.z,0,1000,0.0,1.0);
+
 		}else if (quadrotor.mavlink_system.nav_mode == NAV_ALTHOLD){
+
 			// Dead zone
 			int16_t buffer;
 			if ( ( quadrotor.mavlink_control.z > -100 ) && ( quadrotor.mavlink_control.z < 100 )){
@@ -315,13 +320,15 @@ void DataCollection(void *p){
 				buffer = quadrotor.mavlink_control.z;
 			}
 
+			// Integrator
 			quadrotor.sv.setpoint[ALTITUDE] += map(buffer,-1000,1000,-0.005,0.005);
+
 			if ( quadrotor.sv.setpoint[ALTITUDE] < 0.0 ){
 				quadrotor.sv.setpoint[ALTITUDE] = 0.0;
 			}else if ( quadrotor.sv.setpoint[ALTITUDE] > 3.0 ){
 				quadrotor.sv.setpoint[ALTITUDE] = 3.0;
 			}
-			current_alt_sp = quadrotor.sv.setpoint[ALTITUDE]; // Esto esta feo, estaria bueno que sea solo el sp la variable a usar
+
 		}
 
 		//-----------------------------------------------------------------------
@@ -345,9 +352,9 @@ void DataCollection(void *p){
 			alt_2 = alt_1;
 			alt_1 = quadrotor.sv.altitude;
 
-			if (quadrotor.mavlink_system.nav_mode == NAV_ATTI){
+			if (quadrotor.mavlink_system.nav_mode == NAV_ALTHOLD){
 				if (fabs(second_derivate)<5.0){
-					quadrotor.sv.altitudeCtrlOutput = qPID_Procees(&quadrotor.altitudeController,current_alt_sp,quadrotor.sv.altitude);
+					quadrotor.sv.altitudeCtrlOutput = qPID_Procees(&quadrotor.altitudeController,quadrotor.sv.setpoint[ALTITUDE],quadrotor.sv.altitude);
 				}
 			}else{
 				quadrotor.sv.altitudeCtrlOutput = quadrotor.sv.setpoint[ALTITUDE];
@@ -363,7 +370,6 @@ void DataCollection(void *p){
 		control[ROLL] = quadrotor.sv.rateCtrlOutput[ROLL];
 		control[PITCH] =  quadrotor.sv.rateCtrlOutput[PITCH];
 		control[YAW] = -quadrotor.sv.rateCtrlOutput[YAW]; //FIXME: there is a problem with the sign (maybe in the Mq)
-		//control[ALTITUDE] = quadrotor.sv.setpoint[ALTITUDE];
 		control[ALTITUDE] = quadrotor.sv.altitudeCtrlOutput;
 
 		quadrotor.sv.motorOutput[0] = (	control[ALTITUDE]*K_Z - control[ROLL]*K_PHI - control[PITCH]*K_THETA - control[YAW]*K_PSI	);
@@ -371,7 +377,7 @@ void DataCollection(void *p){
 		quadrotor.sv.motorOutput[2] = (	control[ALTITUDE]*K_Z + control[ROLL]*K_PHI + control[PITCH]*K_THETA - control[YAW]*K_PSI	);
 		quadrotor.sv.motorOutput[3] = (	control[ALTITUDE]*K_Z + control[ROLL]*K_PHI - control[PITCH]*K_THETA + control[YAW]*K_PSI	);
 
-		if (quadrotor.mode == ESC_STANDBY){
+		if ((quadrotor.mavlink_system.mode & MAV_MODE_FLAG_SAFETY_ARMED) == 0){
 			qESC_SetOutput(MOTOR1,0);
 			qESC_SetOutput(MOTOR2,0);
 			qESC_SetOutput(MOTOR3,0);
@@ -383,7 +389,6 @@ void DataCollection(void *p){
 				for (i=1;i<5;i++) qLed_TurnOff(leds[i]);
 			}
 			quadrotor.sv.setpoint[ALTITUDE] = 0.0;
-			current_alt_sp = 0.0;
 		}else{
 			// Motor command
 			qESC_SetOutput(MOTOR1,quadrotor.sv.motorOutput[0]);
@@ -391,7 +396,6 @@ void DataCollection(void *p){
 			qESC_SetOutput(MOTOR3,quadrotor.sv.motorOutput[2]);
 			qESC_SetOutput(MOTOR4,quadrotor.sv.motorOutput[3]);
 		}
-
 
 	}
 
